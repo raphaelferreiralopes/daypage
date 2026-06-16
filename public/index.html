@@ -8,21 +8,112 @@
 </head>
 <body>
   <aside id="sidebar">
-    <header>
-      <h1>📓 Journal</h1>
-      <button id="todayBtn" title="Go to today">Today</button>
-    </header>
-    <ul id="dayList"></ul>
+    <nav id="nav">
+      <button class="nav-tab active" data-view="journal">📓 Journal</button>
+      <button class="nav-tab" data-view="cycles">🔄 Cycles</button>
+      <button class="nav-tab" data-view="habits">✅ Habits</button>
+    </nav>
+    <div id="sidebarBody">
+      <div id="journalControls">
+        <button id="todayBtn" title="Go to today">Today</button>
+      </div>
+      <ul id="dayList"></ul>
+      <div id="cycleControls" hidden>
+        <button id="addCycleBtn" title="Add a cycle">+ New cycle</button>
+      </div>
+      <ul id="cycleList" hidden></ul>
+    </div>
   </aside>
 
   <main id="main">
-    <div id="entryHeader">
-      <h2 id="entryDate">—</h2>
-      <span id="status"></span>
-    </div>
-    <textarea id="editor" placeholder="Write today's entry…" spellcheck="true"></textarea>
-    <div id="readonlyNote" hidden>🔒 This day is read-only. You can only edit today's page.</div>
+    <!-- JOURNAL VIEW -->
+    <section id="journalView" class="view">
+      <div id="entryHeader">
+        <h2 id="entryDate">—</h2>
+        <span id="dayCycle" class="cycle-chip" hidden></span>
+        <span id="status"></span>
+      </div>
+
+      <section id="habits">
+        <div id="habitsHeader">
+          <h3>Habits</h3>
+          <button id="addHabitBtn" title="Add a habit">+ Add habit</button>
+        </div>
+        <div id="habitList"></div>
+      </section>
+
+      <textarea id="editor" placeholder="Write today's entry…" spellcheck="true"></textarea>
+      <div id="readonlyNote" hidden>🔒 This day is read-only. You can only edit today's page.</div>
+    </section>
+
+    <!-- CYCLE VIEW -->
+    <section id="cyclesView" class="view" hidden>
+      <div id="entryHeader">
+        <h2 id="cycleName">—</h2>
+        <span id="cycleBadge"></span>
+        <span id="cycleStatus"></span>
+      </div>
+
+      <nav id="cycleTabs">
+        <button class="cycle-tab active" data-page="rules">📜 Rules</button>
+        <button class="cycle-tab" data-page="okrs">🎯 OKR &amp; Goals</button>
+        <button class="cycle-tab" data-page="progress">📊 Progress</button>
+      </nav>
+
+      <!-- Rules page -->
+      <div id="cyclePageRules" class="cycle-page">
+        <div id="cycleMeta"></div>
+        <textarea id="cycleEditor" placeholder="Rules for this cycle…" spellcheck="true"></textarea>
+        <div id="cycleReadonlyNote" hidden>🔒 This cycle has ended and is read-only.</div>
+      </div>
+
+      <!-- OKR & Goals page -->
+      <div id="cyclePageOkrs" class="cycle-page" hidden>
+        <section id="goals">
+          <div id="goalsHeader">
+            <h3>Goals</h3>
+            <button id="addGoalBtn" title="Add a goal for this cycle">+ Add goal</button>
+          </div>
+          <div id="goalList"></div>
+        </section>
+
+        <section id="okrs">
+          <div id="okrsHeader">
+            <h3>OKRs</h3>
+            <button id="addOkrBtn" title="Add an OKR to this cycle">+ Add OKR</button>
+          </div>
+          <div id="okrList"></div>
+        </section>
+      </div>
+
+      <!-- Progress page -->
+      <div id="cyclePageProgress" class="cycle-page" hidden>
+        <div id="cycleProgress"></div>
+        <div id="goalProgressList"></div>
+      </div>
+    </section>
+
+    <!-- HABITS OVERVIEW VIEW -->
+    <section id="habitsView" class="view" hidden>
+      <div id="entryHeader">
+        <h2>Habits overview</h2>
+        <button id="addHabitBtn2" class="primary-btn">+ Add habit</button>
+      </div>
+      <div id="overview"></div>
+    </section>
   </main>
+
+  <div id="modalOverlay" hidden>
+    <div id="modal" role="dialog" aria-modal="true">
+      <h3 id="modalTitle"></h3>
+      <div id="modalFields"></div>
+      <div id="modalError"></div>
+      <div id="modalActions">
+        <button id="modalCancel">Cancel</button>
+        <button id="modalSubmit" class="primary-btn">Save</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/app.js"></script>
 </body>

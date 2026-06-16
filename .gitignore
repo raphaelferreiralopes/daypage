@@ -1,8 +1,17 @@
-# Your private journal entries — never commit these
+# Your private journal entries & habit data — never commit these
 entries/
+habit-data/
+habits.json
+cycle-notes/
+cycles.json
+okrs.json
+goals.json
 
 # macOS
 .DS_Store
+
+# misc
+.Rhistory
 
 # Node
 node_modules/
