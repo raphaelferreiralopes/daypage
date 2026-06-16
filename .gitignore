@@ -1,0 +1,9 @@
+# Your private journal entries — never commit these
+entries/
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Journal</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <aside id="sidebar">
+    <header>
+      <h1>📓 Journal</h1>
+      <button id="todayBtn" title="Go to today">Today</button>
+    </header>
+    <ul id="dayList"></ul>
+  </aside>
+
+  <main id="main">
+    <div id="entryHeader">
+      <h2 id="entryDate">—</h2>
+      <span id="status"></span>
+    </div>
+    <textarea id="editor" placeholder="Write today's entry…" spellcheck="true"></textarea>
+    <div id="readonlyNote" hidden>🔒 This day is read-only. You can only edit today's page.</div>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
