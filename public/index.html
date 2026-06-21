@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Journal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -12,6 +15,7 @@
       <button class="nav-tab active" data-view="journal">📓 Journal</button>
       <button class="nav-tab" data-view="cycles">🔄 Cycles</button>
       <button class="nav-tab" data-view="habits">✅ Habits</button>
+      <button class="nav-tab" data-view="time">⏱️ Time</button>
     </nav>
     <div id="sidebarBody">
       <div id="journalControls">
@@ -22,6 +26,8 @@
         <button id="addCycleBtn" title="Add a cycle">+ New cycle</button>
       </div>
       <ul id="cycleList" hidden></ul>
+      <ul id="habitNav" hidden></ul>
+      <ul id="projectNav" hidden></ul>
     </div>
   </aside>
 
@@ -42,8 +48,40 @@
         <div id="habitList"></div>
       </section>
 
-      <textarea id="editor" placeholder="Write today's entry…" spellcheck="true"></textarea>
+      <section id="timeTracker">
+        <div id="timeHeader">
+          <h3>Time</h3>
+          <span id="timeTotal"></span>
+        </div>
+        <div id="timerRow">
+          <select id="timerProject" title="Project to track"></select>
+          <button id="newProjectBtn" class="ghost-mini" title="New project">+ Project</button>
+          <button id="timerToggle" class="primary-btn">▶ Start</button>
+          <span id="timerElapsed" hidden>0:00</span>
+          <button id="logTimeBtn" class="ghost-mini" title="Log time manually">Log time</button>
+        </div>
+        <div id="timeEntries"></div>
+      </section>
+
+      <div id="editorWrap">
+        <div id="editorBackdrop" aria-hidden="true"></div>
+        <textarea id="editor" placeholder="Write today's notes…" spellcheck="true"></textarea>
+      </div>
+
+      <section id="whatHappened">
+        <label for="summaryInput">What happened today?</label>
+        <input id="summaryInput" type="text" placeholder="In one sentence…" autocomplete="off" />
+      </section>
+
       <div id="readonlyNote" hidden>🔒 This day is read-only. You can only edit today's page.</div>
+
+      <div id="weekSection" hidden>
+        <div id="weekEditorWrap">
+          <div id="weekEditorBackdrop" aria-hidden="true"></div>
+          <textarea id="weekEditor" placeholder="Write this week's notes…" spellcheck="true"></textarea>
+        </div>
+        <div id="weekReadonlyNote" hidden>🔒 This week has passed and is read-only. You can only edit the current week's notes.</div>
+      </div>
     </section>
 
     <!-- CYCLE VIEW -->
@@ -51,6 +89,7 @@
       <div id="entryHeader">
         <h2 id="cycleName">—</h2>
         <span id="cycleBadge"></span>
+        <span id="cycleLength"></span>
         <span id="cycleStatus"></span>
       </div>
 
@@ -96,10 +135,26 @@
     <!-- HABITS OVERVIEW VIEW -->
     <section id="habitsView" class="view" hidden>
       <div id="entryHeader">
-        <h2>Habits overview</h2>
+        <h2 id="habitsTitle">Habits overview</h2>
         <button id="addHabitBtn2" class="primary-btn">+ Add habit</button>
       </div>
       <div id="overview"></div>
+      <div id="habitDetail" hidden>
+        <textarea id="habitNotes" placeholder="Write anything about this habit…" spellcheck="true"></textarea>
+      </div>
+    </section>
+
+    <!-- TIME OVERVIEW VIEW -->
+    <section id="timeView" class="view" hidden>
+      <div id="entryHeader">
+        <h2 id="timeTitle">Time</h2>
+        <span id="timeGrand"></span>
+        <button id="addProjectBtn" class="primary-btn" style="margin-left:auto">+ New project</button>
+      </div>
+      <div id="projectOverview"></div>
+      <div id="projectDetail" hidden>
+        <textarea id="projectNotes" placeholder="Write anything about this project…" spellcheck="true"></textarea>
+      </div>
     </section>
   </main>
 
@@ -114,6 +169,8 @@
       </div>
     </div>
   </div>
+
+  <div id="slashMenu" hidden></div>
 
   <script src="/app.js"></script>
 </body>

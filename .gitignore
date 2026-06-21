@@ -1,11 +1,17 @@
 # Your private journal entries & habit data — never commit these
 entries/
 habit-data/
+habit-notes/
 habits.json
 cycle-notes/
 cycles.json
 okrs.json
 goals.json
+day-summaries/
+projects.json
+project-notes/
+time-entries/
+timer.json
 
 # macOS
 .DS_Store

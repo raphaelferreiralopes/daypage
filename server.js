@@ -10,14 +10,26 @@ const ROOT = __dirname;
 const ENTRIES_DIR = path.join(ROOT, 'entries');
 const HABITS_FILE = path.join(ROOT, 'habits.json');
 const HABIT_DATA_DIR = path.join(ROOT, 'habit-data');
+const HABIT_NOTES_DIR = path.join(ROOT, 'habit-notes');
 const CYCLES_FILE = path.join(ROOT, 'cycles.json');
 const CYCLE_NOTES_DIR = path.join(ROOT, 'cycle-notes');
 const OKRS_FILE = path.join(ROOT, 'okrs.json');
 const GOALS_FILE = path.join(ROOT, 'goals.json');
+const SUMMARY_DIR = path.join(ROOT, 'day-summaries');
+const PROJECTS_FILE = path.join(ROOT, 'projects.json');
+const PROJECT_NOTES_DIR = path.join(ROOT, 'project-notes');
+const TIME_DIR = path.join(ROOT, 'time-entries');
+const TIMER_FILE = path.join(ROOT, 'timer.json');
+const WEEKLY_DIR = path.join(ROOT, 'week-notes');
 
 fs.mkdirSync(ENTRIES_DIR, { recursive: true });
 fs.mkdirSync(HABIT_DATA_DIR, { recursive: true });
+fs.mkdirSync(HABIT_NOTES_DIR, { recursive: true });
 fs.mkdirSync(CYCLE_NOTES_DIR, { recursive: true });
+fs.mkdirSync(SUMMARY_DIR, { recursive: true });
+fs.mkdirSync(TIME_DIR, { recursive: true });
+fs.mkdirSync(PROJECT_NOTES_DIR, { recursive: true });
+fs.mkdirSync(WEEKLY_DIR, { recursive: true });
 
 // --- date helpers (local time) ---------------------------------------------
 function todayStr() {
@@ -31,6 +43,21 @@ function todayStr() {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 function isValidDate(s) {
   return DATE_RE.test(s) && !Number.isNaN(Date.parse(s));
+}
+
+function weekStart(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDay(); // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day; // shift to Monday
+  d.setDate(d.getDate() + diff);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+function currentWeekStart() {
+  return weekStart(todayStr());
 }
 
 function addDays(dateStr, n) {
@@ -97,7 +124,29 @@ function readEntry(date) {
     habits: enrichHabits(readHabits()),
     habitValues: readHabitData(date),
     cycle: cycleForDate(date),
+    summary: readSummary(date),
+    time: dayTime(date),
   };
+}
+
+function summaryPath(date) {
+  return path.join(SUMMARY_DIR, `${date}.txt`);
+}
+
+function readSummary(date) {
+  const p = summaryPath(date);
+  return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
+}
+
+// "What happened today?" — one-sentence answer, today-only like the notes.
+function saveSummary(date, text) {
+  if (date !== todayStr()) {
+    const err = new Error("Only today's page is editable.");
+    err.status = 403;
+    throw err;
+  }
+  fs.writeFileSync(summaryPath(date), text, 'utf8');
+  return { ok: true, date };
 }
 
 // --- habits -----------------------------------------------------------------
@@ -135,7 +184,7 @@ function createHabit({ name, type, unit, okrId }) {
   return habit;
 }
 
-function updateHabit(id, { name, unit, okrId }) {
+function updateHabit(id, { name, unit, okrId, type }) {
   const habits = readHabits();
   const habit = habits.find((h) => h.id === id);
   if (!habit) {
@@ -144,6 +193,10 @@ function updateHabit(id, { name, unit, okrId }) {
     throw err;
   }
   if (typeof name === 'string' && name.trim()) habit.name = name.trim();
+  if (type === 'check' || type === 'value') {
+    habit.type = type;
+    if (type === 'check') habit.unit = ''; // checkboxes have no unit
+  }
   if (typeof unit === 'string' && habit.type === 'value') habit.unit = unit.trim();
   if (okrId !== undefined) habit.okrId = okrId && readOkrs().some((o) => o.id === okrId) ? okrId : null;
   writeHabits(habits);
@@ -153,6 +206,26 @@ function updateHabit(id, { name, unit, okrId }) {
 function deleteHabit(id) {
   writeHabits(readHabits().filter((h) => h.id !== id));
   writeGoals(readGoals().filter((g) => g.habitId !== id)); // drop goals targeting it
+  const np = habitNotesPath(id);
+  if (fs.existsSync(np)) fs.rmSync(np);
+  return { ok: true };
+}
+
+// Free-form notes / description for a habit (editable any time).
+function habitNotesPath(id) {
+  return path.join(HABIT_NOTES_DIR, `${id}.md`);
+}
+function readHabitNotes(id) {
+  const p = habitNotesPath(id);
+  return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
+}
+function saveHabitNotes(id, content) {
+  if (!readHabits().some((h) => h.id === id)) {
+    const err = new Error('Unknown habit.');
+    err.status = 404;
+    throw err;
+  }
+  fs.writeFileSync(habitNotesPath(id), content, 'utf8');
   return { ok: true };
 }
 
@@ -258,9 +331,18 @@ function decorateCycle(c) {
 
 function listCycles() {
   const ctx = makeCtx(); // one shared cache for every cycle's goal computation
+  // Order: active cycle first, then upcoming ones chronologically, then past
+  // ones most-recent first.
+  const rank = (c) => (c.isCurrent ? 0 : c.ended ? 2 : 1);
   return readCycles()
     .map((c) => ({ ...decorateCycle(c), overallProgress: cycleGoals(c.id, ctx).overall }))
-    .sort((a, b) => (a.start < b.start ? 1 : -1)); // most recent first
+    .sort((a, b) => {
+      const ra = rank(a);
+      const rb = rank(b);
+      if (ra !== rb) return ra - rb;
+      if (ra === 1) return a.start < b.start ? -1 : 1; // upcoming: soonest first
+      return a.start < b.start ? 1 : -1; // current/past: most recent first
+    });
 }
 
 function cycleForDate(date) {
@@ -564,6 +646,278 @@ function cycleGoals(cycleId, ctx = makeCtx()) {
   return { goals, overall };
 }
 
+// --- projects ---------------------------------------------------------------
+function readProjects() {
+  if (!fs.existsSync(PROJECTS_FILE)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(PROJECTS_FILE, 'utf8'));
+  } catch {
+    return [];
+  }
+}
+
+function writeProjects(projects) {
+  fs.writeFileSync(PROJECTS_FILE, JSON.stringify(projects, null, 2), 'utf8');
+}
+
+const PROJECT_STATUSES = ['active', 'onhold', 'archive'];
+
+function createProject({ name, status }) {
+  name = String(name || '').trim();
+  if (!name) {
+    const err = new Error('Project name is required.');
+    err.status = 400;
+    throw err;
+  }
+  const projects = readProjects();
+  const project = {
+    id: 'p_' + crypto.randomUUID().slice(0, 8),
+    name,
+    status: PROJECT_STATUSES.includes(status) ? status : 'active',
+  };
+  projects.push(project);
+  writeProjects(projects);
+  return project;
+}
+
+function updateProject(id, { name, status }) {
+  const projects = readProjects();
+  const project = projects.find((p) => p.id === id);
+  if (!project) {
+    const err = new Error('Unknown project.');
+    err.status = 404;
+    throw err;
+  }
+  if (typeof name === 'string' && name.trim()) project.name = name.trim();
+  if (PROJECT_STATUSES.includes(status)) project.status = status;
+  writeProjects(projects);
+  return project;
+}
+
+function deleteProject(id) {
+  writeProjects(readProjects().filter((p) => p.id !== id));
+  const np = projectNotesPath(id);
+  if (fs.existsSync(np)) fs.rmSync(np);
+  return { ok: true };
+}
+
+// Free-form description / notes for a project.
+function projectNotesPath(id) {
+  return path.join(PROJECT_NOTES_DIR, `${id}.md`);
+}
+function readProjectNotes(id) {
+  const p = projectNotesPath(id);
+  return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
+}
+function saveProjectNotes(id, content) {
+  if (!readProjects().some((p) => p.id === id)) {
+    const err = new Error('Unknown project.');
+    err.status = 404;
+    throw err;
+  }
+  fs.writeFileSync(projectNotesPath(id), content, 'utf8');
+  return { ok: true };
+}
+
+// --- time tracking ----------------------------------------------------------
+function timePath(date) {
+  return path.join(TIME_DIR, `${date}.json`);
+}
+
+function readTime(date) {
+  const p = timePath(date);
+  if (!fs.existsSync(p)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch {
+    return [];
+  }
+}
+
+function writeTime(date, entries) {
+  fs.writeFileSync(timePath(date), JSON.stringify(entries, null, 2), 'utf8');
+}
+
+// Day's time entries with project names resolved, plus the total seconds.
+function dayTime(date) {
+  const projects = readProjects();
+  const nameOf = (id) => (projects.find((p) => p.id === id) || {}).name || '(deleted project)';
+  const entries = readTime(date).map((e) => ({ ...e, projectName: nameOf(e.projectId) }));
+  const total = entries.reduce((s, e) => s + (e.seconds || 0), 0);
+  return { entries, total };
+}
+
+function requireToday(date) {
+  if (date !== todayStr()) {
+    const err = new Error('Only today is editable.');
+    err.status = 403;
+    throw err;
+  }
+}
+
+function addTime(date, { projectId, seconds, note }) {
+  requireToday(date);
+  if (!readProjects().some((p) => p.id === projectId)) {
+    const err = new Error('Time must be linked to a valid project.');
+    err.status = 400;
+    throw err;
+  }
+  const s = Math.round(Number(seconds));
+  if (!(s > 0)) {
+    const err = new Error('Duration must be greater than zero.');
+    err.status = 400;
+    throw err;
+  }
+  const entries = readTime(date);
+  const entry = { id: 't_' + crypto.randomUUID().slice(0, 8), projectId, seconds: s, note: String(note || '').trim() };
+  entries.push(entry);
+  writeTime(date, entries);
+  return entry;
+}
+
+function deleteTime(date, entryId) {
+  requireToday(date);
+  writeTime(date, readTime(date).filter((e) => e.id !== entryId));
+  return { ok: true };
+}
+
+// --- running timer (single, server-authoritative so reloads survive) --------
+function readTimer() {
+  if (!fs.existsSync(TIMER_FILE)) return null;
+  try {
+    const t = JSON.parse(fs.readFileSync(TIMER_FILE, 'utf8'));
+    return t && t.projectId ? t : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeTimer(timer) {
+  if (timer) fs.writeFileSync(TIMER_FILE, JSON.stringify(timer, null, 2), 'utf8');
+  else if (fs.existsSync(TIMER_FILE)) fs.rmSync(TIMER_FILE);
+}
+
+// Current timer with live elapsed seconds, or null.
+function timerState() {
+  const t = readTimer();
+  if (!t) return null;
+  const project = readProjects().find((p) => p.id === t.projectId);
+  return {
+    projectId: t.projectId,
+    projectName: project ? project.name : '(deleted project)',
+    startedAt: t.startedAt,
+    elapsed: Math.max(0, Math.floor((Date.now() - t.startedAt) / 1000)),
+  };
+}
+
+function startTimer(projectId) {
+  if (readTimer()) {
+    const err = new Error('A timer is already running. Stop it first.');
+    err.status = 409;
+    throw err;
+  }
+  if (!readProjects().some((p) => p.id === projectId)) {
+    const err = new Error('Pick a valid project to track.');
+    err.status = 400;
+    throw err;
+  }
+  writeTimer({ projectId, startedAt: Date.now() });
+  return timerState();
+}
+
+// Stop the timer and log the elapsed time to today (if it's at least 1 second).
+function stopTimer() {
+  const t = readTimer();
+  if (!t) {
+    const err = new Error('No timer is running.');
+    err.status = 400;
+    throw err;
+  }
+  writeTimer(null);
+  const seconds = Math.floor((Date.now() - t.startedAt) / 1000);
+  if (seconds < 1) return { ok: true, logged: false };
+  const entry = addTime(todayStr(), { projectId: t.projectId, seconds });
+  return { ok: true, logged: true, entry };
+}
+
+// Per-project time totals across windows: all-time, today, last 7 days, current cycle.
+function timeOverview() {
+  const projects = readProjects();
+  const today = todayStr();
+  const last7Start = addDays(today, -6);
+  const cur = readCycles().find((c) => c.start <= today && today <= c.end) || null;
+
+  const buckets = {};
+  for (const p of projects)
+    buckets[p.id] = { id: p.id, name: p.name, status: p.status || 'active', total: 0, today: 0, last7: 0, cycle: 0 };
+
+  for (const f of fs.readdirSync(TIME_DIR)) {
+    if (!f.endsWith('.json')) continue;
+    const date = f.slice(0, -5);
+    if (!isValidDate(date)) continue;
+    for (const e of readTime(date)) {
+      const b = buckets[e.projectId];
+      if (!b) continue; // time for a deleted project is dropped from the overview
+      const s = e.seconds || 0;
+      b.total += s;
+      if (date === today) b.today += s;
+      if (date >= last7Start && date <= today) b.last7 += s;
+      if (cur && date >= cur.start && date <= cur.end) b.cycle += s;
+    }
+  }
+
+  const list = Object.values(buckets).sort((a, b) => b.total - a.total);
+  return {
+    projects: list,
+    grandTotal: list.reduce((s, b) => s + b.total, 0),
+    currentCycle: cur ? { id: cur.id, name: cur.name } : null,
+  };
+}
+
+// --- weekly notes -----------------------------------------------------------
+function weekNotePath(ws) {
+  return path.join(WEEKLY_DIR, `${ws}.md`);
+}
+
+function listWeekNotes() {
+  const cws = currentWeekStart();
+  const files = fs
+    .readdirSync(WEEKLY_DIR)
+    .filter((f) => f.endsWith('.md'))
+    .map((f) => f.slice(0, -3))
+    .filter(isValidDate);
+  const weeks = new Set(files);
+  weeks.add(cws);
+  return [...weeks]
+    .sort()
+    .reverse()
+    .map((ws) => ({ weekStart: ws, weekEnd: addDays(ws, 6), isCurrent: ws === cws, hasNote: files.includes(ws) }));
+}
+
+function readWeekNote(ws) {
+  const actual = weekStart(ws);
+  const cws = currentWeekStart();
+  const p = weekNotePath(actual);
+  return {
+    weekStart: actual,
+    weekEnd: addDays(actual, 6),
+    content: fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '',
+    editable: actual === cws,
+    isCurrent: actual === cws,
+  };
+}
+
+function saveWeekNote(ws, content) {
+  const actual = weekStart(ws);
+  if (actual !== currentWeekStart()) {
+    const err = new Error("Only this week's notes are editable.");
+    err.status = 403;
+    throw err;
+  }
+  fs.writeFileSync(weekNotePath(actual), content, 'utf8');
+  return { ok: true, weekStart: actual };
+}
+
 // --- tiny static file server ------------------------------------------------
 const MIME = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' };
 
@@ -624,6 +978,18 @@ const server = http.createServer((req, res) => {
     // POST /api/habits  { name, type, unit }  -> create habit
     if (req.method === 'POST' && url.pathname === '/api/habits') {
       return readBody(req, res, (data) => sendJson(res, 200, createHabit(data)));
+    }
+
+    // GET /api/habits/:id/notes  -> the habit's description/notes
+    if (req.method === 'GET' && parts[1] === 'habits' && parts[2] && parts[3] === 'notes') {
+      return sendJson(res, 200, { content: readHabitNotes(parts[2]) });
+    }
+    // POST /api/habits/:id/notes  { content }
+    if (req.method === 'POST' && parts[1] === 'habits' && parts[2] && parts[3] === 'notes') {
+      return readBody(req, res, ({ content }) => {
+        if (typeof content !== 'string') return sendJson(res, 400, { error: 'content must be a string' });
+        sendJson(res, 200, saveHabitNotes(parts[2], content));
+      });
     }
 
     // GET /api/overview?days=N  -> habits with recent history + streaks
@@ -728,6 +1094,85 @@ const server = http.createServer((req, res) => {
       return readBody(req, res, ({ content }) => {
         if (typeof content !== 'string') return sendJson(res, 400, { error: 'content must be a string' });
         sendJson(res, 200, saveEntry(parts[2], content));
+      });
+    }
+
+    // POST /api/summary/:date  { text }  -> "what happened today" answer
+    if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'summary' && parts[2]) {
+      if (!isValidDate(parts[2])) return sendJson(res, 400, { error: 'Bad date' });
+      return readBody(req, res, ({ text }) => {
+        if (typeof text !== 'string') return sendJson(res, 400, { error: 'text must be a string' });
+        sendJson(res, 200, saveSummary(parts[2], text));
+      });
+    }
+
+    // --- projects ---
+    if (req.method === 'GET' && url.pathname === '/api/projects') {
+      return sendJson(res, 200, readProjects());
+    }
+    if (req.method === 'POST' && url.pathname === '/api/projects') {
+      return readBody(req, res, (data) => sendJson(res, 200, createProject(data)));
+    }
+    // GET/POST /api/projects/:id/notes  -> project description
+    if (req.method === 'GET' && parts[1] === 'projects' && parts[2] && parts[3] === 'notes') {
+      return sendJson(res, 200, { content: readProjectNotes(parts[2]) });
+    }
+    if (req.method === 'POST' && parts[1] === 'projects' && parts[2] && parts[3] === 'notes') {
+      return readBody(req, res, ({ content }) => {
+        if (typeof content !== 'string') return sendJson(res, 400, { error: 'content must be a string' });
+        sendJson(res, 200, saveProjectNotes(parts[2], content));
+      });
+    }
+    if (req.method === 'PUT' && parts[0] === 'api' && parts[1] === 'projects' && parts[2]) {
+      return readBody(req, res, (data) => sendJson(res, 200, updateProject(parts[2], data)));
+    }
+    if (req.method === 'DELETE' && parts[0] === 'api' && parts[1] === 'projects' && parts[2]) {
+      return sendJson(res, 200, deleteProject(parts[2]));
+    }
+
+    // --- time overview ---
+    if (req.method === 'GET' && url.pathname === '/api/time-overview') {
+      return sendJson(res, 200, timeOverview());
+    }
+
+    // --- timer ---
+    if (req.method === 'GET' && url.pathname === '/api/timer') {
+      return sendJson(res, 200, timerState());
+    }
+    if (req.method === 'POST' && url.pathname === '/api/timer/start') {
+      return readBody(req, res, ({ projectId }) => sendJson(res, 200, startTimer(projectId)));
+    }
+    if (req.method === 'POST' && url.pathname === '/api/timer/stop') {
+      return sendJson(res, 200, stopTimer());
+    }
+
+    // --- manual time entries ---
+    // POST /api/time/:date  { projectId, seconds, note }
+    if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'time' && parts[2] && !parts[3]) {
+      if (!isValidDate(parts[2])) return sendJson(res, 400, { error: 'Bad date' });
+      return readBody(req, res, (data) => sendJson(res, 200, addTime(parts[2], data)));
+    }
+    // DELETE /api/time/:date/:entryId
+    if (req.method === 'DELETE' && parts[0] === 'api' && parts[1] === 'time' && parts[2] && parts[3]) {
+      if (!isValidDate(parts[2])) return sendJson(res, 400, { error: 'Bad date' });
+      return sendJson(res, 200, deleteTime(parts[2], parts[3]));
+    }
+
+    // GET /api/week-notes
+    if (req.method === 'GET' && url.pathname === '/api/week-notes') {
+      return sendJson(res, 200, listWeekNotes());
+    }
+    // GET /api/week-note/:ws
+    if (req.method === 'GET' && parts[0] === 'api' && parts[1] === 'week-note' && parts[2]) {
+      if (!isValidDate(parts[2])) return sendJson(res, 400, { error: 'Bad date' });
+      return sendJson(res, 200, readWeekNote(parts[2]));
+    }
+    // POST /api/week-note/:ws  { content }
+    if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'week-note' && parts[2]) {
+      if (!isValidDate(parts[2])) return sendJson(res, 400, { error: 'Bad date' });
+      return readBody(req, res, ({ content }) => {
+        if (typeof content !== 'string') return sendJson(res, 400, { error: 'content must be a string' });
+        sendJson(res, 200, saveWeekNote(parts[2], content));
       });
     }
 
