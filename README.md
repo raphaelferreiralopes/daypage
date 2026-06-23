@@ -25,3 +25,4 @@ Then open http://localhost:3000
 - `server.js` — zero-dependency Node server (API + static files)
 - `public/` — the browser UI (`index.html`, `style.css`, `app.js`)
 - `entries/` — your journal, one Markdown file per day
+# Journal-app
