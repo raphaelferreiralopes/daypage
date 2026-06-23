@@ -26,3 +26,4 @@ Then open http://localhost:3000
 - `public/` — the browser UI (`index.html`, `style.css`, `app.js`)
 - `entries/` — your journal, one Markdown file per day
 # Journal-app
+# Journal-app
