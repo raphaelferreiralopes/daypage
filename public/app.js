@@ -1808,6 +1808,24 @@ function makeRichFill(ta) {
 [cycleEditor, habitNotes, projectNotes].forEach(makeRichFill);
 const refreshRich = (ta) => ta._richSync && ta._richSync();
 
+// sidebar collapse toggle
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const btn = document.getElementById('sidebarToggle');
+  const STORAGE_KEY = 'sidebar-collapsed';
+  function apply(collapsed) {
+    sidebar.classList.toggle('collapsed', collapsed);
+    btn.textContent = collapsed ? '›' : '‹';
+    btn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  }
+  apply(localStorage.getItem(STORAGE_KEY) === '1');
+  btn.addEventListener('click', () => {
+    const next = !sidebar.classList.contains('collapsed');
+    localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
+    apply(next);
+  });
+})();
+
 // boot: open today
 (async function init() {
   await Promise.all([loadDays(), loadProjects(), refreshTimer()]);

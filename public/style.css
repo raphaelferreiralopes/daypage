@@ -52,7 +52,36 @@ body { display: flex; height: 100vh; overflow: hidden; }
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  position: relative;
+  transition: width 0.22s ease;
 }
+#sidebar.collapsed { width: 0; overflow: hidden; border-right-color: transparent; }
+#sidebar.collapsed #nav,
+#sidebar.collapsed #sidebarBody { opacity: 0; pointer-events: none; }
+#sidebarToggle {
+  position: absolute;
+  top: 50%;
+  right: -14px;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 18px;
+  height: 40px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 0 6px 6px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.15s, color 0.15s;
+}
+#sidebarToggle:hover { background: var(--accent-soft); color: var(--accent); }
+#sidebar.collapsed #sidebarToggle { right: -18px; border-radius: 6px; }
 #nav { display: flex; flex-wrap: wrap; padding: 10px; gap: 6px; border-bottom: 1px solid var(--border); }
 .nav-tab {
   flex: 1 1 40%;
