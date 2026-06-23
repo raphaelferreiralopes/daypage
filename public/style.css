@@ -59,12 +59,12 @@ body { display: flex; height: 100vh; overflow: hidden; }
 #sidebar.collapsed #nav,
 #sidebar.collapsed #sidebarBody { opacity: 0; pointer-events: none; }
 #sidebarToggle {
-  position: absolute;
+  position: fixed;
   top: 50%;
-  right: -14px;
-  transform: translateY(-50%);
-  z-index: 10;
-  width: 18px;
+  left: 240px;
+  transform: translateY(-50%) translateX(-50%);
+  z-index: 50;
+  width: 20px;
   height: 40px;
   background: var(--panel);
   border: 1px solid var(--border-strong);
@@ -78,10 +78,10 @@ body { display: flex; height: 100vh; overflow: hidden; }
   justify-content: center;
   padding: 0;
   box-shadow: var(--shadow-sm);
-  transition: background 0.15s, color 0.15s;
+  transition: left 0.22s ease, background 0.15s, color 0.15s;
 }
 #sidebarToggle:hover { background: var(--accent-soft); color: var(--accent); }
-#sidebar.collapsed #sidebarToggle { right: -18px; border-radius: 6px; }
+body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) translateX(0); border-radius: 0 6px 6px 0; }
 #nav { display: flex; flex-wrap: wrap; padding: 10px; gap: 6px; border-bottom: 1px solid var(--border); }
 .nav-tab {
   flex: 1 1 40%;

@@ -1815,6 +1815,7 @@ const refreshRich = (ta) => ta._richSync && ta._richSync();
   const STORAGE_KEY = 'sidebar-collapsed';
   function apply(collapsed) {
     sidebar.classList.toggle('collapsed', collapsed);
+    document.body.classList.toggle('sidebar-collapsed', collapsed);
     btn.textContent = collapsed ? '›' : '‹';
     btn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
   }
