@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Journal</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="auth-locked">
+  <div id="authOverlay" hidden>
+    <div id="authBox">
+      <h2 id="authTitle">Sign in</h2>
+      <form id="authForm">
+        <input id="authEmail" type="email" placeholder="Email" autocomplete="email" required />
+        <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password" required minlength="6" />
+        <div id="authError"></div>
+        <div id="authNotice" hidden></div>
+        <button id="authSubmit" type="submit" class="primary-btn">Sign in</button>
+      </form>
+      <button id="authToggleMode" class="ghost-mini">Need an account? Sign up</button>
+    </div>
+  </div>
+
+  <aside id="sidebar">
+    <nav id="nav">
+      <button class="nav-tab active" data-view="journal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Journal
+      </button>
+      <button class="nav-tab" data-view="cycles">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Cycles
+      </button>
+      <button class="nav-tab" data-view="habits">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m8 12.5 2.6 2.6L16.5 9"/></svg>
+        Habits
+      </button>
+      <button class="nav-tab" data-view="time">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5.3l3.5 2.1"/></svg>
+        Time
+      </button>
+      <button class="nav-tab" data-view="checklist">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11.5 11 13.5 15 9"/><rect x="3.5" y="3.5" width="17" height="17" rx="3"/></svg>
+        Checklist
+      </button>
+      <button class="nav-tab" data-view="life">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18"/><path d="M8 2.5v4M16 2.5v4"/></svg>
+        Life
+      </button>
+    </nav>
+    <div id="sidebarBody">
+      <div id="journalControls">
+        <button id="todayBtn" title="Go to today">Today</button>
+      </div>
+      <ul id="dayList"></ul>
+      <div id="cycleControls" hidden>
+        <button id="addCycleBtn" title="Add a cycle">+ New cycle</button>
+      </div>
+      <ul id="cycleList" hidden></ul>
+      <ul id="habitNav" hidden></ul>
+      <ul id="projectNav" hidden></ul>
+    </div>
+    <button id="logoutBtn" title="Log out">Log out</button>
+  </aside>
+
+  <button id="sidebarToggle" title="Collapse sidebar">‹</button>
+
+  <main id="main">
+    <!-- JOURNAL VIEW -->
+    <section id="journalView" class="view">
+      <div id="entryHeader">
+        <h2 id="entryDate">—</h2>
+        <span id="dayCycle" class="cycle-chip" hidden></span>
+        <span id="status"></span>
+      </div>
+
+      <nav id="dayTabs">
+        <button class="day-tab" data-page="time">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5.3l3.5 2.1"/></svg>
+          Time
+        </button>
+        <button class="day-tab" data-page="habits">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m8 12.5 2.6 2.6L16.5 9"/></svg>
+          Habits
+        </button>
+        <button class="day-tab" data-page="notes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          Notes
+        </button>
+        <button class="day-tab" data-page="reflexion">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 6.3 15.4L21 21l-.6-3A9 9 0 0 0 12 3z"/></svg>
+          Reflexion
+        </button>
+        <button class="day-tab" data-page="learnings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Learnings
+        </button>
+        <button class="day-tab" data-page="sentence">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="M4 12a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v0a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v0z"/></svg>
+          Recap
+        </button>
+      </nav>
+
+      <div id="dayPageTime" class="day-page">
+        <section id="timeTracker">
+          <div id="timeHeader">
+            <h3>Time</h3>
+            <span id="timeTotal"></span>
+          </div>
+          <div id="timerRow">
+            <select id="timerProject" title="Project to track"></select>
+            <button id="newProjectBtn" class="ghost-mini" title="New project">+ Project</button>
+            <button id="timerToggle" class="primary-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5v13a1 1 0 0 0 1.53.85l10.6-6.5a1 1 0 0 0 0-1.7L8.53 4.65A1 1 0 0 0 7 5.5z"/></svg> Start</button>
+            <span id="timerElapsed" hidden>0:00</span>
+            <button id="logTimeBtn" class="ghost-mini" title="Log time manually">Log time</button>
+          </div>
+          <div id="timeEntries"></div>
+        </section>
+      </div>
+
+      <div id="dayPageHabits" class="day-page" hidden>
+        <section id="habits">
+          <div id="habitsHeader">
+            <h3>Habits</h3>
+            <button id="addHabitBtn" title="Add a habit">+ Add habit</button>
+          </div>
+          <div id="habitList"></div>
+        </section>
+      </div>
+
+      <div id="dayPageNotes" class="day-page" hidden>
+        <div id="editorWrap">
+          <div id="editorBackdrop" aria-hidden="true"></div>
+          <textarea id="editor" placeholder="Write today's notes…" spellcheck="true"></textarea>
+        </div>
+        <div id="readonlyNote" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Notes can only be edited up to today.</div>
+      </div>
+
+      <div id="dayPageReflexion" class="day-page" hidden>
+        <div id="reflexionWrap">
+          <div id="reflexionBackdrop" aria-hidden="true"></div>
+          <textarea id="reflexionEditor" placeholder="What happened today? Reflect on it…" spellcheck="true"></textarea>
+        </div>
+        <div id="reflexionReadonlyNote" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Reflexion can only be edited up to today.</div>
+      </div>
+
+      <div id="dayPageLearnings" class="day-page" hidden>
+        <div id="learningsWrap">
+          <div id="learningsBackdrop" aria-hidden="true"></div>
+          <textarea id="learningsEditor" placeholder="What did you learn today?" spellcheck="true"></textarea>
+        </div>
+        <div id="learningsReadonlyNote" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Learnings can only be edited up to today.</div>
+      </div>
+
+      <div id="dayPageSentence" class="day-page" hidden>
+        <section id="whatHappened">
+          <label for="summaryInput">What happened today?</label>
+          <input id="summaryInput" type="text" placeholder="In one sentence…" autocomplete="off" />
+        </section>
+      </div>
+
+      <div id="weekSection" hidden>
+        <nav id="weekTabs">
+          <button class="day-tab" data-page="time">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5.3l3.5 2.1"/></svg>
+            Time
+          </button>
+          <button class="day-tab" data-page="habits">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m8 12.5 2.6 2.6L16.5 9"/></svg>
+            Habits
+          </button>
+          <button class="day-tab" data-page="notes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            Notes
+          </button>
+          <button class="day-tab" data-page="reflexion">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 6.3 15.4L21 21l-.6-3A9 9 0 0 0 12 3z"/></svg>
+            Reflexion
+          </button>
+          <button class="day-tab" data-page="learnings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            Learnings
+          </button>
+        </nav>
+
+        <div id="weekPageTime" class="day-page" hidden>
+          <div id="weekTimeSummary"></div>
+        </div>
+
+        <div id="weekPageHabits" class="day-page" hidden>
+          <div id="weekHabitsSummary"></div>
+        </div>
+
+        <div id="weekPageNotes" class="day-page">
+          <div id="weekEditorWrap">
+            <div id="weekEditorBackdrop" aria-hidden="true"></div>
+            <textarea id="weekEditor" placeholder="Write this week's notes…" spellcheck="true"></textarea>
+          </div>
+          <div id="weekReadonlyNote" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> This week has passed and is read-only. You can only edit the current week's notes.</div>
+        </div>
+
+        <div id="weekPageReflexion" class="day-page" hidden>
+          <div id="weekReflexionWrap">
+            <div id="weekReflexionBackdrop" aria-hidden="true"></div>
+            <textarea id="weekReflexionEditor" placeholder="Reflect on this week…" spellcheck="true"></textarea>
+          </div>
+          <div id="weekReflexionReadonlyNote" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Only this week's reflexion is editable.</div>
+        </div>
+
+        <div id="weekPageLearnings" class="day-page" hidden>
+          <div id="weekLearningsSummary"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CYCLE VIEW -->
+    <section id="cyclesView" class="view" hidden>
+      <div id="entryHeader">
+        <h2 id="cycleName">—</h2>
+        <span id="cycleBadge"></span>
+        <span id="cycleLength"></span>
+        <span id="cycleStatus"></span>
+      </div>
+
+      <div id="cycleTimeProgress" class="cycle-time-progress"></div>
+
+      <nav id="cycleTabs">
+        <button class="cycle-tab active" data-page="rules">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M9 13h6M9 17h6"/></svg>
+          Rules
+        </button>
+        <button class="cycle-tab" data-page="okrs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+          OKR &amp; Goals
+        </button>
+        <button class="cycle-tab" data-page="progress">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>
+          Progress
+        </button>
+      </nav>
+
+      <!-- Rules page -->
+      <div id="cyclePageRules" class="cycle-page">
+        <div id="cycleMeta"></div>
+        <textarea id="cycleEditor" placeholder="Rules for this cycle…" spellcheck="true"></textarea>
+        <div id="cycleReadonlyNote" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> This cycle has ended and is read-only.</div>
+      </div>
+
+      <!-- OKR & Goals page -->
+      <div id="cyclePageOkrs" class="cycle-page" hidden>
+        <section id="goals">
+          <div id="goalsHeader">
+            <h3>Goals</h3>
+            <button id="addGoalBtn" title="Add a goal for this cycle">+ Add goal</button>
+          </div>
+          <div id="goalList"></div>
+        </section>
+
+        <section id="okrs">
+          <div id="okrsHeader">
+            <h3>OKRs</h3>
+            <button id="addOkrBtn" title="Add an OKR to this cycle">+ Add OKR</button>
+          </div>
+          <div id="okrList"></div>
+        </section>
+      </div>
+
+      <!-- Progress page -->
+      <div id="cyclePageProgress" class="cycle-page" hidden>
+        <div id="cycleProgress"></div>
+        <div id="goalProgressList"></div>
+      </div>
+    </section>
+
+    <!-- HABITS OVERVIEW VIEW -->
+    <section id="habitsView" class="view" hidden>
+      <div id="entryHeader">
+        <h2 id="habitsTitle">Habits overview</h2>
+        <button id="addHabitBtn2" class="primary-btn">+ Add habit</button>
+      </div>
+      <div id="overview"></div>
+      <div id="habitDetail" hidden>
+        <textarea id="habitNotes" placeholder="Write anything about this habit…" spellcheck="true"></textarea>
+      </div>
+    </section>
+
+    <!-- TIME OVERVIEW VIEW -->
+    <section id="timeView" class="view" hidden>
+      <div id="entryHeader">
+        <h2 id="timeTitle">Time</h2>
+        <span id="timeGrand"></span>
+        <button id="addProjectBtn" class="primary-btn" style="margin-left:auto">+ New project</button>
+      </div>
+      <div id="projectOverview"></div>
+      <div id="projectDetail" hidden>
+        <textarea id="projectNotes" placeholder="Write anything about this project…" spellcheck="true"></textarea>
+      </div>
+    </section>
+
+    <!-- CHECKLIST VIEW (recurring daily checklists) -->
+    <section id="checklistView" class="view" hidden>
+      <div id="checklistHeader">
+        <h2>Checklists</h2>
+        <button id="addChecklistBtn" class="primary-btn" style="margin-left:auto">+ New checklist</button>
+      </div>
+      <div id="checklistList"></div>
+    </section>
+
+    <!-- LIFE VIEW (Recap calendar) -->
+    <section id="lifeView" class="view" hidden>
+      <div id="entryHeader">
+        <button id="lifePrev" class="ghost-mini" title="Previous">‹</button>
+        <h2 id="lifeLabel">—</h2>
+        <button id="lifeNext" class="ghost-mini" title="Next">›</button>
+        <nav id="lifeModeTabs">
+          <button class="day-tab active" data-mode="month">Month</button>
+          <button class="day-tab" data-mode="year">Year</button>
+        </nav>
+        <button id="lifeTodayBtn" class="ghost-mini" style="margin-left:auto">Today</button>
+      </div>
+      <div id="lifeCalendar"></div>
+    </section>
+  </main>
+
+  <div id="modalOverlay" hidden>
+    <div id="modal" role="dialog" aria-modal="true">
+      <h3 id="modalTitle"></h3>
+      <div id="modalFields"></div>
+      <div id="modalError"></div>
+      <div id="modalActions">
+        <button id="modalCancel">Cancel</button>
+        <button id="modalSubmit" class="primary-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="slashMenu" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/auth.js"></script>
+</body>
+</html>

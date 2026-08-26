@@ -1,0 +1,116 @@
+:root {
+  --bg: #f5f5f7;
+  --panel: #ffffff;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.13);
+  --text: #1d1d1f;
+  --muted: rgba(60, 60, 67, 0.6);
+  --faint: rgba(60, 60, 67, 0.4);
+  --accent: #007aff;
+  --accent-strong: #0060df;
+  --accent-soft: rgba(0, 122, 255, 0.1);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-pop: 0 20px 50px rgba(0, 0, 0, 0.1), 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1e;
+    --panel: #2c2c2e;
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: rgba(255, 255, 255, 0.15);
+    --text: #f5f5f7;
+    --muted: rgba(235, 235, 245, 0.6);
+    --faint: rgba(235, 235, 245, 0.4);
+    --accent: #0a84ff;
+    --accent-strong: #409cff;
+    --accent-soft: rgba(10, 132, 255, 0.16);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-pop: 0 20px 50px rgba(0, 0, 0, 0.55), 0 4px 14px rgba(0, 0, 0, 0.3);
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration: none; }
+
+#lpHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 980px; margin: 0 auto; padding: 22px 24px;
+}
+#lpBrand {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 17px; font-weight: 700; letter-spacing: -0.02em;
+}
+#lpBrand svg { width: 20px; height: 20px; color: var(--accent); }
+#lpNavSignIn {
+  font-size: 13.5px; font-weight: 600; color: var(--muted);
+  padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border-strong);
+}
+#lpNavSignIn:hover { color: var(--text); border-color: var(--text); }
+
+#lpHero {
+  max-width: 720px; margin: 0 auto; padding: 60px 24px 40px; text-align: center;
+}
+#lpHero h1 {
+  font-size: clamp(30px, 5vw, 44px); font-weight: 750; letter-spacing: -0.03em;
+  line-height: 1.12; margin: 0 0 18px;
+}
+#lpHero p {
+  font-size: 17px; line-height: 1.55; color: var(--muted); margin: 0 auto 32px; max-width: 560px;
+}
+#lpHeroActions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+.lp-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 12px 22px; border-radius: 999px; font-size: 14.5px; font-weight: 650;
+  box-shadow: var(--shadow-sm);
+}
+.lp-btn-primary { background: var(--accent); color: #ffffff; }
+.lp-btn-primary:hover { background: var(--accent-strong); }
+.lp-btn-ghost { background: var(--panel); color: var(--text); border: 1px solid var(--border-strong); }
+.lp-btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+#lpFeatures {
+  max-width: 980px; margin: 20px auto 0; padding: 20px 24px 10px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+}
+@media (max-width: 760px) { #lpFeatures { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { #lpFeatures { grid-template-columns: 1fr; } }
+
+.lp-feature {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+  padding: 22px;
+}
+.lp-feature-icon {
+  width: 34px; height: 34px; border-radius: 10px; background: var(--accent-soft);
+  color: var(--accent); display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
+}
+.lp-feature-icon svg { width: 18px; height: 18px; }
+.lp-feature h3 { margin: 0 0 6px; font-size: 15.5px; font-weight: 650; letter-spacing: -0.01em; }
+.lp-feature p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+
+#lpPrivacy {
+  max-width: 640px; margin: 60px auto; padding: 0 24px; text-align: center;
+}
+#lpPrivacy h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 12px; }
+#lpPrivacy p { font-size: 15px; line-height: 1.6; color: var(--muted); margin: 0; }
+
+#lpCta {
+  max-width: 640px; margin: 0 auto; padding: 40px 24px 90px; text-align: center;
+}
+#lpCta h2 { font-size: 26px; font-weight: 750; letter-spacing: -0.02em; margin: 0 0 22px; }
+
+#lpFooter {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 980px; margin: 0 auto; padding: 22px 24px 40px;
+  font-size: 12.5px; color: var(--faint); border-top: 1px solid var(--border);
+}
+#lpFooter a { color: var(--faint); }
+#lpFooter a:hover { color: var(--accent); }

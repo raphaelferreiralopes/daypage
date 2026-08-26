@@ -232,7 +232,7 @@ app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 // frontend too, since there's no platform doing it for you.
 if (require.main === module) {
   const path = require('path');
-  app.use(express.static(path.join(__dirname, '..', 'public')));
+  app.use(express.static(path.join(__dirname, '..', 'public'), { extensions: ['html'] }));
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => console.log(`\n  \u{1F4D3} Journal running at http://localhost:${PORT}\n`));
 }
