@@ -749,8 +749,13 @@ async function toggleTimer() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectId }),
     });
-    if (res.ok) await refreshTimer();
-    else alert((await res.json()).error || 'Could not start timer');
+    const body = await res.json();
+    if (res.ok) {
+      runningTimer = body;
+      if (view === 'journal') applyTimerUI();
+    } else {
+      alert(body.error || 'Could not start timer');
+    }
   }
 }
 
