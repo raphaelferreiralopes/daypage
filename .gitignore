@@ -8,10 +8,17 @@ cycles.json
 okrs.json
 goals.json
 day-summaries/
+day-learnings/
+day-reflexions/
 projects.json
 project-notes/
 time-entries/
 timer.json
+week-notes/
+week-reflexions/
+week-notes-backup-*/
+checklists.json
+checklist-data/
 
 # macOS
 .DS_Store
@@ -22,3 +29,10 @@ timer.json
 # Node
 node_modules/
 npm-debug.log*
+
+# Supabase/Vercel secrets
+.env
+.env.local
+.vercel/
+.vercel
+.env*

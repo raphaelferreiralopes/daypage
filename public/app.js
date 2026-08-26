@@ -1,5 +1,9 @@
 'use strict';
 
+const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7"/><path d="M6 7l1 13a1.5 1.5 0 0 0 1.5 1.4h7A1.5 1.5 0 0 0 17 20L18 7"/><path d="M10 11v6M14 11v6"/></svg>';
+const PLAY_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5v13a1 1 0 0 0 1.53.85l10.6-6.5a1 1 0 0 0 0-1.7L8.53 4.65A1 1 0 0 0 7 5.5z"/></svg>';
+const STOP_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+
 const dayList = document.getElementById('dayList');
 const editor = document.getElementById('editor');
 const editorBackdrop = document.getElementById('editorBackdrop');
@@ -39,6 +43,19 @@ const projectOverview = document.getElementById('projectOverview');
 const addProjectBtn = document.getElementById('addProjectBtn');
 const projectNav = document.getElementById('projectNav');
 const projectDetail = document.getElementById('projectDetail');
+// life view (Recap calendar)
+const lifeView = document.getElementById('lifeView');
+const lifeLabel = document.getElementById('lifeLabel');
+const lifeCalendar = document.getElementById('lifeCalendar');
+const lifePrev = document.getElementById('lifePrev');
+const lifeNext = document.getElementById('lifeNext');
+const lifeTodayBtn = document.getElementById('lifeTodayBtn');
+const lifeModeTabsNav = document.getElementById('lifeModeTabs');
+const lifeModeTabs = lifeModeTabsNav.querySelectorAll('.day-tab');
+// checklist view (recurring daily checklists)
+const checklistView = document.getElementById('checklistView');
+const checklistList = document.getElementById('checklistList');
+const addChecklistBtn = document.getElementById('addChecklistBtn');
 const projectNotes = document.getElementById('projectNotes');
 const dayCycle = document.getElementById('dayCycle');
 // week section (inside journalView)
@@ -46,10 +63,39 @@ const weekSection = document.getElementById('weekSection');
 const weekEditorBackdrop = document.getElementById('weekEditorBackdrop');
 const weekEditor = document.getElementById('weekEditor');
 const weekReadonlyNote = document.getElementById('weekReadonlyNote');
-const habitsSection = document.getElementById('habits');
-const timeTrackerSection = document.getElementById('timeTracker');
-const editorWrap = document.getElementById('editorWrap');
-const whatHappenedSection = document.getElementById('whatHappened');
+// week sub-tabs (Time / Habits / Notes / Reflexion / Learnings)
+const weekTabsNav = document.getElementById('weekTabs');
+const weekTabs = weekTabsNav.querySelectorAll('.day-tab');
+const weekPages = {
+  time: document.getElementById('weekPageTime'),
+  habits: document.getElementById('weekPageHabits'),
+  notes: document.getElementById('weekPageNotes'),
+  reflexion: document.getElementById('weekPageReflexion'),
+  learnings: document.getElementById('weekPageLearnings'),
+};
+const weekTimeSummaryEl = document.getElementById('weekTimeSummary');
+const weekHabitsSummaryEl = document.getElementById('weekHabitsSummary');
+const weekLearningsSummaryEl = document.getElementById('weekLearningsSummary');
+const weekReflexionEditor = document.getElementById('weekReflexionEditor');
+const weekReflexionBackdrop = document.getElementById('weekReflexionBackdrop');
+const weekReflexionReadonlyNote = document.getElementById('weekReflexionReadonlyNote');
+// day sub-tabs (Time / Habits / Notes / Reflexion / Learnings / Recap)
+const dayTabsNav = document.getElementById('dayTabs');
+const dayTabs = dayTabsNav.querySelectorAll('.day-tab');
+const dayPages = {
+  time: document.getElementById('dayPageTime'),
+  habits: document.getElementById('dayPageHabits'),
+  notes: document.getElementById('dayPageNotes'),
+  reflexion: document.getElementById('dayPageReflexion'),
+  learnings: document.getElementById('dayPageLearnings'),
+  sentence: document.getElementById('dayPageSentence'),
+};
+const learningsEditor = document.getElementById('learningsEditor');
+const learningsBackdrop = document.getElementById('learningsBackdrop');
+const learningsReadonlyNote = document.getElementById('learningsReadonlyNote');
+const reflexionEditor = document.getElementById('reflexionEditor');
+const reflexionBackdrop = document.getElementById('reflexionBackdrop');
+const reflexionReadonlyNote = document.getElementById('reflexionReadonlyNote');
 // cycles
 const cyclesView = document.getElementById('cyclesView');
 const cycleControls = document.getElementById('cycleControls');
@@ -65,6 +111,7 @@ const cycleReadonlyNote = document.getElementById('cycleReadonlyNote');
 const okrList = document.getElementById('okrList');
 const addOkrBtn = document.getElementById('addOkrBtn');
 const cycleProgress = document.getElementById('cycleProgress');
+const cycleTimeProgress = document.getElementById('cycleTimeProgress');
 const goalList = document.getElementById('goalList');
 const addGoalBtn = document.getElementById('addGoalBtn');
 const goalProgressList = document.getElementById('goalProgressList');
@@ -103,18 +150,29 @@ let currentCycle = null; // currently open cycle id
 let cycleEditable = false;
 let cycleSaveTimer = null;
 let cyclePage = 'rules'; // active sub-page within a cycle
+let dayPage = 'notes'; // active sub-tab within a day (time/habits/notes/reflexion/learnings)
+let learningsSaveTimer = null;
+let reflexionSaveTimer = null;
+let weekPage = 'notes'; // active sub-tab within a week (time/habits/notes/reflexion/learnings)
+let weekReflexionSaveTimer = null;
+let lifeViewMode = 'month'; // 'month' | 'year'
+let lifeMonth = null; // 'YYYY-MM' currently shown on the Life calendar
+let lifeYear = null; // 'YYYY' currently shown in year mode
+let recapsCache = null; // Map(date -> text), loaded once and reused across months/years
 
 function fmtDate(date) {
   const d = new Date(date + 'T00:00:00');
-  return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const weekday = d.toLocaleDateString('de-DE', { weekday: 'long' });
+  const month = d.toLocaleDateString('de-DE', { month: 'long' });
+  return `${weekday}, der ${d.getDate()}. ${month} ${d.getFullYear()}`;
 }
 
-function mondayOf(dateStr) {
+function weekStartOf(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const day = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const isoDay = day === 0 ? 7 : day;
+  d.setDate(d.getDate() - (isoDay - 1));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function addClientDays(dateStr, n) {
@@ -131,6 +189,16 @@ function fmtWeekShort(start, end) {
   return `${s.toLocaleDateString(undefined, mo)} – ${e.toLocaleDateString(undefined, mo)}`;
 }
 
+// ISO-8601 week number. `mondayStr` is the Monday of the week (our weeks are
+// always Monday-based); the ISO week belongs to the year containing that
+// week's Thursday, which matters right around New Year's.
+function isoWeekNumber(weekStartStr) {
+  const thursday = new Date(weekStartStr + 'T00:00:00');
+  thursday.setDate(thursday.getDate() + 3);
+  const yearStart = new Date(thursday.getFullYear(), 0, 1);
+  return Math.ceil(((thursday - yearStart) / 86400000 + 1) / 7);
+}
+
 // How long a cycle runs, in weeks (inclusive of both start and end days).
 function cycleWeeks(start, end) {
   if (!start || !end) return '';
@@ -140,6 +208,32 @@ function cycleWeeks(start, end) {
   return `${w} week${weeks === 1 ? '' : 's'}`;
 }
 
+// How many days of a cycle have elapsed, out of its total length.
+function cycleTimeElapsed(start, end) {
+  if (!start || !end) return null;
+  const startD = new Date(start + 'T00:00:00');
+  const endD = new Date(end + 'T00:00:00');
+  const today = new Date(todayISO() + 'T00:00:00');
+  const totalDays = Math.round((endD - startD) / 86400000) + 1;
+  let elapsedDays;
+  if (today < startD) elapsedDays = 0;
+  else if (today > endD) elapsedDays = totalDays;
+  else elapsedDays = Math.round((today - startD) / 86400000) + 1;
+  const pct = Math.min(100, Math.max(0, Math.round((elapsedDays / totalDays) * 100)));
+  return { elapsedDays, totalDays, pct };
+}
+
+function renderCycleTimeProgress(c) {
+  const t = cycleTimeElapsed(c.start, c.end);
+  if (!t) {
+    cycleTimeProgress.innerHTML = '';
+    return;
+  }
+  cycleTimeProgress.innerHTML =
+    `<div class="cycle-progress-label"><span>Time elapsed</span><span>Day ${t.elapsedDays} of ${t.totalDays} (${t.pct}%)</span></div>` +
+    `<div class="bar big${t.pct >= 100 ? ' done' : ''}"><span style="width:${t.pct}%"></span></div>`;
+}
+
 // Day list as a collapsible Year → Months → Days tree.
 let dayTree = null;
 const expandedNodes = new Set();
@@ -147,17 +241,17 @@ let treeInited = false;
 
 async function loadDays() {
   const [days, weekNotes] = await Promise.all([
-    fetch('/api/entries').then((r) => r.json()),
-    fetch('/api/week-notes').then((r) => r.ok ? r.json() : []),
+    apiFetch('/api/entries').then((r) => r.json()),
+    apiFetch('/api/week-notes').then((r) => r.ok ? r.json() : []),
   ]);
   const weekNotesMap = new Map(weekNotes.map((w) => [w.weekStart, w]));
   const today = todayISO();
-  const cws = mondayOf(today);
+  const cws = weekStartOf(today);
 
   // group days by their week
   const weekMap = new Map();
   for (const d of days) {
-    const ws = mondayOf(d.date);
+    const ws = weekStartOf(d.date);
     if (!weekMap.has(ws)) {
       const wn = weekNotesMap.get(ws) || {};
       weekMap.set(ws, { weekStart: ws, weekEnd: addClientDays(ws, 6), isCurrent: ws === cws, hasWeekNote: wn.hasNote || false, days: [] });
@@ -215,8 +309,8 @@ function renderDayTree() {
     const yOpen = expandedNodes.has(yKey);
     const yLi = document.createElement('li');
     yLi.className = 'tree-year';
-    yLi.innerHTML = `<span class="caret">${yOpen ? '▾' : '▸'}</span><span>${y}</span>`;
-    yLi.onclick = () => toggleNode(yKey);
+    yLi.innerHTML = `<button class="tree-toggle">${yOpen ? '▾' : '▸'}</button><span>${y}</span>`;
+    yLi.querySelector('.tree-toggle').onclick = (e) => { e.stopPropagation(); toggleNode(yKey); };
     dayList.appendChild(yLi);
     if (!yOpen) continue;
 
@@ -226,8 +320,8 @@ function renderDayTree() {
       const monthName = new Date(+y, +m - 1, 1).toLocaleString(undefined, { month: 'long' });
       const mLi = document.createElement('li');
       mLi.className = 'tree-month';
-      mLi.innerHTML = `<span class="caret">${mOpen ? '▾' : '▸'}</span><span>${monthName}</span>`;
-      mLi.onclick = () => toggleNode(mKey);
+      mLi.innerHTML = `<button class="tree-toggle">${mOpen ? '▾' : '▸'}</button><span>${monthName}</span>`;
+      mLi.querySelector('.tree-toggle').onclick = (e) => { e.stopPropagation(); toggleNode(mKey); };
       dayList.appendChild(mLi);
       if (!mOpen) continue;
 
@@ -239,12 +333,13 @@ function renderDayTree() {
         if (week.isCurrent) wLi.classList.add('today');
         if (week.weekStart === currentWeek && currentMode === 'week') wLi.classList.add('active');
         const range = fmtWeekShort(week.weekStart, week.weekEnd);
+        wLi.title = range;
         wLi.innerHTML =
-          `<span class="caret">${wOpen ? '▾' : '▸'}</span>` +
+          `<button class="tree-toggle">${wOpen ? '▾' : '▸'}</button>` +
           `<span class="dot">${week.hasWeekNote ? '●' : '○'}</span>` +
-          `<span>${range}${week.isCurrent ? ' · Now' : ''}</span>`;
-        wLi.querySelector('.caret').onclick = (e) => { e.stopPropagation(); toggleNode(wKey); };
-        wLi.onclick = (ev) => { if (!ev.target.classList.contains('caret')) openWeek(week.weekStart); };
+          `<span class="week-label">KW ${isoWeekNumber(week.weekStart)}${week.isCurrent ? ' <span class="week-badge">Aktuell</span>' : ''}</span>`;
+        wLi.querySelector('.tree-toggle').onclick = (e) => { e.stopPropagation(); toggleNode(wKey); };
+        wLi.onclick = (ev) => { if (!ev.target.classList.contains('tree-toggle')) openWeek(week.weekStart); };
         dayList.appendChild(wLi);
         if (!wOpen) continue;
 
@@ -268,7 +363,7 @@ function renderDayTree() {
 // Make sure a date's year/month/week are expanded so the open day is visible.
 function ensureDayVisible(date) {
   if (!dayTree) return;
-  const ws = mondayOf(date);
+  const ws = weekStartOf(date);
   const [wy, wm] = ws.split('-');
   expandedNodes.add('y' + wy);
   expandedNodes.add('m' + wy + wm);
@@ -277,25 +372,22 @@ function ensureDayVisible(date) {
 }
 
 async function openDay(date) {
-  const entry = await fetch(`/api/entry/${date}`).then((r) => r.json());
+  const entry = await apiFetch(`/api/entry/${date}`).then((r) => r.json());
   current = date;
   currentMode = 'day';
   editable = entry.editable;
   // switch to day mode
-  habitsSection.hidden = false;
-  timeTrackerSection.hidden = false;
-  editorWrap.hidden = false;
-  whatHappenedSection.hidden = false;
+  dayTabsNav.hidden = false;
   weekSection.hidden = true;
-  entryDate.textContent = `Notes-${date}`;
-  entryDate.title = fmtDate(date);
+  entryDate.textContent = fmtDate(date);
+  entryDate.title = date;
   editor.value = entry.content;
   editor.disabled = !entry.editable;
   readonlyNote.hidden = entry.editable;
   statusEl.textContent = entry.editable ? '' : 'Read-only';
   if (entry.cycle) {
     dayCycle.hidden = false;
-    dayCycle.textContent = '🔄 ' + entry.cycle.name;
+    dayCycle.textContent = entry.cycle.name;
     dayCycle.title = 'Open this cycle';
     dayCycle.onclick = () => switchView('cycles').then(() => openCycle(entry.cycle.id));
   } else {
@@ -307,9 +399,31 @@ async function openDay(date) {
   summaryInput.disabled = !entry.editable;
   renderEditorBackdrop();
   autoGrowEditor();
+  learningsEditor.value = entry.learnings || '';
+  learningsEditor.disabled = !entry.editable;
+  learningsReadonlyNote.hidden = entry.editable;
+  renderLearningsBackdrop();
+  autoGrowLearningsEditor();
+  reflexionEditor.value = entry.reflexion || '';
+  reflexionEditor.disabled = !entry.editable;
+  reflexionReadonlyNote.hidden = entry.editable;
+  renderReflexionBackdrop();
+  autoGrowReflexionEditor();
   ensureDayVisible(date);
-  if (entry.editable) editor.focus();
+  switchDayPage(dayPage);
 }
+
+// switch between Time / Habits / Notes / Reflexion / Learnings / Recap within a day
+function switchDayPage(page) {
+  dayPage = page;
+  for (const key of Object.keys(dayPages)) dayPages[key].hidden = key !== page;
+  dayTabs.forEach((t) => t.classList.toggle('active', t.dataset.page === page));
+  if (page === 'notes' && editable) editor.focus();
+  if (page === 'reflexion' && editable) reflexionEditor.focus();
+  if (page === 'sentence' && editable) summaryInput.focus();
+  if (page === 'learnings' && editable) learningsEditor.focus();
+}
+dayTabs.forEach((t) => (t.onclick = () => switchDayPage(t.dataset.page)));
 
 // Grow the notes box to fit its content so the whole page scrolls, not the box.
 function autoGrowEditor() {
@@ -352,6 +466,72 @@ function autoGrowWeekEditor() {
 weekEditor.addEventListener('input', renderWeekBackdrop);
 weekEditor.addEventListener('input', autoGrowWeekEditor);
 
+function renderLearningsBackdrop() {
+  learningsBackdrop.innerHTML = highlightNotes(learningsEditor.value);
+}
+function autoGrowLearningsEditor() {
+  learningsEditor.style.height = 'auto';
+  learningsEditor.style.height = learningsEditor.scrollHeight + 'px';
+}
+learningsEditor.addEventListener('input', renderLearningsBackdrop);
+learningsEditor.addEventListener('input', autoGrowLearningsEditor);
+learningsEditor.addEventListener('input', scheduleLearningsSave);
+learningsEditor.addEventListener('blur', () => { clearTimeout(learningsSaveTimer); saveLearnings(); });
+
+function scheduleLearningsSave() {
+  statusEl.textContent = 'Editing…';
+  clearTimeout(learningsSaveTimer);
+  learningsSaveTimer = setTimeout(saveLearnings, 600);
+}
+
+async function saveLearnings() {
+  if (!current || !editable) return;
+  try {
+    const res = await apiFetch(`/api/learnings/${current}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: learningsEditor.value }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+    statusEl.textContent = 'Saved ✓';
+  } catch (e) {
+    statusEl.textContent = '⚠ ' + e.message;
+  }
+}
+
+function renderReflexionBackdrop() {
+  reflexionBackdrop.innerHTML = highlightNotes(reflexionEditor.value);
+}
+function autoGrowReflexionEditor() {
+  reflexionEditor.style.height = 'auto';
+  reflexionEditor.style.height = reflexionEditor.scrollHeight + 'px';
+}
+reflexionEditor.addEventListener('input', renderReflexionBackdrop);
+reflexionEditor.addEventListener('input', autoGrowReflexionEditor);
+reflexionEditor.addEventListener('input', scheduleReflexionSave);
+reflexionEditor.addEventListener('blur', () => { clearTimeout(reflexionSaveTimer); saveReflexion(); });
+
+function scheduleReflexionSave() {
+  statusEl.textContent = 'Editing…';
+  clearTimeout(reflexionSaveTimer);
+  reflexionSaveTimer = setTimeout(saveReflexion, 600);
+}
+
+async function saveReflexion() {
+  if (!current || !editable) return;
+  try {
+    const res = await apiFetch(`/api/reflexion/${current}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: reflexionEditor.value }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+    statusEl.textContent = 'Saved ✓';
+  } catch (e) {
+    statusEl.textContent = '⚠ ' + e.message;
+  }
+}
+
 // --- time tracking ----------------------------------------------------------
 function fmtDur(s) {
   s = Math.round(s);
@@ -377,7 +557,7 @@ function trackableProjects() {
 }
 
 async function loadProjects() {
-  projects = await fetch('/api/projects').then((r) => r.json());
+  projects = await apiFetch('/api/projects').then((r) => r.json());
   const keep = timerProject.value;
   const selectable = trackableProjects();
   timerProject.innerHTML = selectable.length
@@ -388,35 +568,130 @@ async function loadProjects() {
 
 function renderTime(entry) {
   timerBaseTotal = entry.time.total;
-  // controls only on today's (editable) page
-  const showControls = entry.editable;
-  document.getElementById('timerRow').style.display = showControls ? 'flex' : 'none';
+  // the live timer only makes sense on today's page; logging/removing time
+  // by hand is allowed on any past day too, so you can backfill a day you
+  // forgot to track.
+  const onToday = entry.isToday;
+  document.getElementById('timerRow').style.display = 'flex';
+  timerProject.style.display = onToday ? '' : 'none';
+  newProjectBtn.style.display = onToday ? '' : 'none';
+  timerToggle.style.display = onToday ? '' : 'none';
+  if (!onToday) timerElapsed.hidden = true;
 
-  timeEntries.innerHTML = '';
-  for (const e of entry.time.entries.slice().reverse()) {
-    const row = document.createElement('div');
-    row.className = 'time-entry';
-    row.innerHTML =
-      `<span class="tproj">${esc(e.projectName)}${e.note ? ` · <span class="tnote">${esc(e.note)}</span>` : ''}</span>` +
-      `<span class="tdur">${fmtDur(e.seconds)}</span>`;
-    if (entry.editable) {
-      const del = document.createElement('button');
-      del.className = 'tdel';
-      del.textContent = '✕';
-      del.title = 'Delete entry';
-      del.onclick = () => deleteTimeEntry(entry.date, e.id);
-      row.appendChild(del);
-    }
-    timeEntries.appendChild(row);
-  }
+  renderTimeEntries(entry);
   updateTimeTotal();
   applyTimerUI();
 }
 
+// Group the day's raw entries by project so the box reads as an overview
+// (project + total invested) with the underlying sessions right below each
+// total, rather than one long chronological list mixing all projects.
+function renderTimeEntries(entry) {
+  const groups = new Map();
+  for (const e of entry.time.entries) {
+    let g = groups.get(e.projectId);
+    if (!g) {
+      g = { name: e.projectName, seconds: 0, entries: [] };
+      groups.set(e.projectId, g);
+    }
+    g.seconds += e.seconds;
+    g.entries.push(e);
+  }
+  const sorted = [...groups.values()].sort((a, b) => b.seconds - a.seconds);
+
+  timeEntries.innerHTML = '';
+  for (const g of sorted) {
+    // header: project + total only — notes and delete live on the sub-entries below
+    const header = document.createElement('div');
+    header.className = 'time-project-total';
+    const left = document.createElement('span');
+    left.className = 'tproj';
+    left.appendChild(document.createTextNode(g.name));
+    header.appendChild(left);
+    const dur = document.createElement('span');
+    dur.className = 'tdur';
+    dur.textContent = fmtDur(g.seconds);
+    header.appendChild(dur);
+    timeEntries.appendChild(header);
+
+    for (const e of g.entries.slice().reverse()) {
+      const row = document.createElement('div');
+      row.className = 'time-entry sub';
+      row.appendChild(noteSlot(entry.date, e.id, e.note));
+      const dur2 = document.createElement('span');
+      dur2.className = 'tdur';
+      dur2.textContent = fmtDur(e.seconds);
+      row.appendChild(dur2);
+      row.appendChild(makeDeleteBtn(entry.date, e.id));
+      timeEntries.appendChild(row);
+    }
+  }
+}
+
+function makeDeleteBtn(date, id) {
+  const del = document.createElement('button');
+  del.className = 'tdel';
+  del.textContent = '✕';
+  del.title = 'Delete entry';
+  del.onclick = () => deleteTimeEntry(date, id);
+  return del;
+}
+
+// Click-to-edit label for "what did you do during this block" — shows the
+// note (or a faint placeholder), swaps to a text input on click, and saves
+// on blur/Enter. Escape reverts without saving.
+function noteSlot(date, id, note) {
+  const wrap = document.createElement('span');
+  wrap.className = 'tnote-slot';
+  paintNoteSlot(wrap, date, id, note);
+  return wrap;
+}
+
+function paintNoteSlot(wrap, date, id, note) {
+  wrap.innerHTML = '';
+  const view = document.createElement('span');
+  view.className = 'tnote' + (note ? '' : ' empty');
+  view.textContent = note || '+ note';
+  view.title = 'What did you do?';
+  view.onclick = (ev) => {
+    ev.stopPropagation();
+    const input = document.createElement('input');
+    input.className = 'tnote-input';
+    input.value = note || '';
+    input.placeholder = 'What did you do?';
+    wrap.innerHTML = '';
+    wrap.appendChild(input);
+    input.focus();
+    input.select();
+    let settled = false;
+    const commit = async () => {
+      if (settled) return;
+      settled = true;
+      const val = input.value.trim();
+      if (val === (note || '')) return paintNoteSlot(wrap, date, id, note);
+      const res = await apiFetch(`/api/time/${date}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: val }),
+      });
+      if (res.ok) note = (await res.json()).note;
+      paintNoteSlot(wrap, date, id, note);
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      else if (e.key === 'Escape') { settled = true; paintNoteSlot(wrap, date, id, note); }
+    });
+  };
+  wrap.appendChild(view);
+}
+
 function updateTimeTotal() {
-  const live = runningTimer && current === todayISO() ? elapsedNow() : 0;
+  const onToday = current === todayISO();
+  const live = runningTimer && onToday ? elapsedNow() : 0;
   const total = timerBaseTotal + live;
-  timeTotal.textContent = total > 0 ? fmtDur(total) + ' today' : 'Nothing tracked yet';
+  const label = onToday ? 'today' : 'that day';
+  timeTotal.textContent = total > 0 ? `${fmtDur(total)} ${label}` : 'Nothing tracked yet';
 }
 
 function elapsedNow() {
@@ -428,14 +703,14 @@ function elapsedNow() {
 function applyTimerUI() {
   const onToday = current === todayISO();
   if (runningTimer && onToday) {
-    timerToggle.textContent = '■ Stop';
+    timerToggle.innerHTML = STOP_SVG + ' Stop';
     timerToggle.classList.add('running');
     timerElapsed.hidden = false;
     timerProject.value = runningTimer.projectId;
     timerProject.disabled = true;
     startTick();
   } else {
-    timerToggle.textContent = '▶ Start';
+    timerToggle.innerHTML = PLAY_SVG + ' Start';
     timerToggle.classList.remove('running');
     timerElapsed.hidden = true;
     timerProject.disabled = false;
@@ -457,19 +732,19 @@ function stopTick() {
 }
 
 async function refreshTimer() {
-  runningTimer = await fetch('/api/timer').then((r) => r.json());
+  runningTimer = await apiFetch('/api/timer').then((r) => r.json());
   if (view === 'journal') applyTimerUI();
 }
 
 async function toggleTimer() {
   if (runningTimer) {
-    await fetch('/api/timer/stop', { method: 'POST' });
+    await apiFetch('/api/timer/stop', { method: 'POST' });
     await refreshTimer();
     if (current) openDay(current); // refresh entries + total
   } else {
     const projectId = timerProject.value;
     if (!projectId) return alert('Create a project first to track time against it.');
-    const res = await fetch('/api/timer/start', {
+    const res = await apiFetch('/api/timer/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectId }),
@@ -486,7 +761,7 @@ async function newProject() {
     fields: [{ key: 'name', label: 'Project name', placeholder: 'e.g. Scolaria', required: true }],
   });
   if (!v) return;
-  const res = await fetch('/api/projects', {
+  const res = await apiFetch('/api/projects', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: v.name.trim() }),
@@ -507,22 +782,23 @@ async function logTime() {
       { key: 'projectId', label: 'Project', type: 'select', options: trackableProjects().map((p) => ({ value: p.id, label: p.name })) },
       { key: 'hours', label: 'Hours', inputMode: 'numeric', placeholder: '0', value: '0' },
       { key: 'minutes', label: 'Minutes', inputMode: 'numeric', placeholder: '30', value: '0' },
+      { key: 'note', label: 'Note', placeholder: 'What did you do? (optional)' },
     ],
   });
   if (!v) return;
   const seconds = (Number(v.hours) || 0) * 3600 + (Number(v.minutes) || 0) * 60;
   if (seconds <= 0) return alert('Enter a duration greater than zero.');
-  const res = await fetch(`/api/time/${current}`, {
+  const res = await apiFetch(`/api/time/${current}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ projectId: v.projectId, seconds }),
+    body: JSON.stringify({ projectId: v.projectId, seconds, note: (v.note || '').trim() }),
   });
   if (res.ok) openDay(current);
   else alert((await res.json()).error || 'Could not log time');
 }
 
 async function deleteTimeEntry(date, id) {
-  const res = await fetch(`/api/time/${date}/${id}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/time/${date}/${id}`, { method: 'DELETE' });
   if (res.ok) openDay(date);
 }
 
@@ -538,7 +814,7 @@ function renderProjectNav() {
   projectNav.innerHTML = '';
   const ov = document.createElement('li');
   ov.className = 'nav-overview' + (openProjectId ? '' : ' active');
-  ov.textContent = '📊 Overview';
+  ov.textContent = 'Overview';
   ov.onclick = showProjectsOverview;
   projectNav.appendChild(ov);
 
@@ -573,7 +849,7 @@ async function showProjectDetail(id) {
   projectOverview.hidden = true;
   projectDetail.hidden = false;
   renderProjectNav();
-  const notes = await fetch(`/api/projects/${id}/notes`).then((r) => r.json());
+  const notes = await apiFetch(`/api/projects/${id}/notes`).then((r) => r.json());
   projectNotes.value = notes.content || '';
   refreshRich(projectNotes);
   projectNotes.focus();
@@ -585,7 +861,7 @@ function scheduleProjectNotesSave() {
 }
 async function saveProjectNotes() {
   if (!openProjectId) return;
-  await fetch(`/api/projects/${openProjectId}/notes`, {
+  await apiFetch(`/api/projects/${openProjectId}/notes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content: projectNotes.value }),
@@ -599,7 +875,7 @@ const STATUS_LABELS = { active: 'Active', onhold: 'On hold', archive: 'Archived'
 const STATUS_ORDER = ['active', 'onhold', 'archive'];
 
 async function loadTimeOverview() {
-  const data = await fetch('/api/time-overview').then((r) => r.json());
+  const data = await apiFetch('/api/time-overview').then((r) => r.json());
   timeGrand.textContent = data.grandTotal ? fmtDur(data.grandTotal) + ' total' : '';
   projectOverview.innerHTML = '';
   if (!data.projects.length) {
@@ -612,7 +888,7 @@ async function loadTimeOverview() {
     if (!inGroup.length) continue;
 
     const header = document.createElement('div');
-    header.className = 'tp-group';
+    header.className = 'time-project-total';
     header.textContent = `${STATUS_LABELS[status]} · ${inGroup.length}`;
     projectOverview.appendChild(header);
 
@@ -650,7 +926,7 @@ function projectCard(p, max, currentCycle) {
 
   const del = document.createElement('button');
   del.className = 'tp-del';
-  del.textContent = '🗑';
+  del.innerHTML = TRASH_SVG;
   del.title = 'Delete project';
   del.onclick = () => removeProject(p.id, p.name);
   top.appendChild(del);
@@ -672,7 +948,7 @@ function projectCard(p, max, currentCycle) {
 }
 
 async function setProjectStatus(id, status) {
-  const res = await fetch(`/api/projects/${id}`, {
+  const res = await apiFetch(`/api/projects/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
@@ -685,7 +961,7 @@ async function setProjectStatus(id, status) {
 }
 
 async function renameProject(id, name) {
-  const res = await fetch(`/api/projects/${id}`, {
+  const res = await apiFetch(`/api/projects/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
@@ -699,7 +975,7 @@ async function renameProject(id, name) {
 
 async function removeProject(id, name) {
   if (!confirm(`Delete project "${name}"? Its logged time will no longer be attributed to it.`)) return;
-  const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/projects/${id}`, { method: 'DELETE' });
   if (res.ok) {
     if (openProjectId === id) openProjectId = null;
     await loadProjects();
@@ -711,13 +987,12 @@ async function removeProject(id, name) {
 // --- habits -----------------------------------------------------------------
 function renderHabits(habits, values) {
   habitList.innerHTML = '';
-  addHabitBtn.hidden = !editable; // only manage habits from today's page
+  addHabitBtn.hidden = !editable; // can't manage habits from a future date's page
   if (!habits.length) {
     habitList.innerHTML = '<div class="habits-empty">No habits yet. Add one to start tracking.</div>';
     return;
   }
-  // checkboxes first, value habits last
-  const ordered = habits.slice().sort((a, b) => (a.type === 'check' ? 0 : 1) - (b.type === 'check' ? 0 : 1));
+  const ordered = habits.slice();
   for (const h of ordered) {
     const row = document.createElement('div');
     row.className = 'habit-row';
@@ -763,7 +1038,7 @@ function renderHabits(habits, values) {
 
 async function saveHabit(habitId, value) {
   statusEl.textContent = 'Saving…';
-  const res = await fetch(`/api/habit/${current}`, {
+  const res = await apiFetch(`/api/habit/${current}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ habitId, value }),
@@ -790,7 +1065,7 @@ async function addHabit() {
     ],
   });
   if (!v) return;
-  const res = await fetch('/api/habits', {
+  const res = await apiFetch('/api/habits', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: v.name.trim(), type: v.type, unit: v.unit }),
@@ -801,7 +1076,7 @@ async function addHabit() {
 
 async function deleteHabit(id, name) {
   if (!confirm(`Delete habit "${name}"? Past values stay on disk but won't be shown.`)) return;
-  const res = await fetch(`/api/habits/${id}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/habits/${id}`, { method: 'DELETE' });
   if (res.ok) {
     if (openHabitId === id) openHabitId = null; // fall back to overview
     refresh();
@@ -815,7 +1090,7 @@ function refresh() {
 }
 
 function okrTag(h) {
-  return h.okr ? ` <span class="okr-tag" title="${esc(h.okr.cycleName || '')}">🎯 ${esc(h.okr.title)}</span>` : '';
+  return h.okr ? ` <span class="okr-tag" title="${esc(h.okr.cycleName || '')}">${esc(h.okr.title)}</span>` : '';
 }
 
 function esc(s) {
@@ -919,7 +1194,7 @@ function scheduleSave() {
 async function save() {
   if (!current) return;
   try {
-    const res = await fetch(`/api/entry/${current}`, {
+    const res = await apiFetch(`/api/entry/${current}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: editor.value }),
@@ -935,28 +1210,125 @@ async function save() {
 
 // --- weekly notes -----------------------------------------------------------
 async function openWeek(ws) {
-  const note = await fetch(`/api/week-note/${ws}`).then((r) => r.json());
+  const note = await apiFetch(`/api/week-note/${ws}`).then((r) => r.json());
   currentWeek = note.weekStart;
   currentMode = 'week';
   weekEditable = note.editable;
   // switch to week mode
-  habitsSection.hidden = true;
-  timeTrackerSection.hidden = true;
-  editorWrap.hidden = true;
-  whatHappenedSection.hidden = true;
+  dayTabsNav.hidden = true;
+  for (const key of Object.keys(dayPages)) dayPages[key].hidden = true;
   readonlyNote.hidden = true;
   weekSection.hidden = false;
   dayCycle.hidden = true;
-  entryDate.textContent = fmtWeekShort(note.weekStart, note.weekEnd);
-  entryDate.title = '';
+  entryDate.textContent = `Kalenderwoche ${isoWeekNumber(note.weekStart)}`;
+  entryDate.title = fmtWeekShort(note.weekStart, note.weekEnd);
   statusEl.textContent = note.editable ? '' : 'Read-only';
   weekEditor.value = note.content;
   weekEditor.disabled = !note.editable;
   weekReadonlyNote.hidden = note.editable;
   renderWeekBackdrop();
   autoGrowWeekEditor();
+  weekReflexionEditor.value = note.reflexion || '';
+  weekReflexionEditor.disabled = !note.editable;
+  weekReflexionReadonlyNote.hidden = note.editable;
+  renderWeekReflexionBackdrop();
+  autoGrowWeekReflexionEditor();
+  renderWeekTime(note);
+  renderWeekHabits(note);
+  renderWeekLearnings(note);
   ensureWeekVisible(note.weekStart);
-  if (note.editable) weekEditor.focus();
+  switchWeekPage(weekPage);
+}
+
+// switch between Time / Habits / Notes / Reflexion / Learnings within a week
+function switchWeekPage(page) {
+  weekPage = page;
+  for (const key of Object.keys(weekPages)) weekPages[key].hidden = key !== page;
+  weekTabs.forEach((t) => t.classList.toggle('active', t.dataset.page === page));
+  if (page === 'notes' && weekEditable) weekEditor.focus();
+  if (page === 'reflexion' && weekEditable) weekReflexionEditor.focus();
+}
+weekTabs.forEach((t) => (t.onclick = () => switchWeekPage(t.dataset.page)));
+
+// read-only rollup: per-project time totals across the week's 7 days
+function renderWeekTime(note) {
+  weekTimeSummaryEl.innerHTML = '';
+  if (!note.time.total) {
+    weekTimeSummaryEl.innerHTML = '<div class="habits-empty">Nothing tracked this week.</div>';
+    return;
+  }
+  const total = document.createElement('div');
+  total.className = 'time-project-total';
+  total.innerHTML = `<span class="tproj">Total</span><span class="tdur">${fmtDur(note.time.total)}</span>`;
+  weekTimeSummaryEl.appendChild(total);
+
+  for (const p of note.time.projects) {
+    const header = document.createElement('div');
+    header.className = 'time-project-total';
+    header.innerHTML = `<span class="tproj">${esc(p.projectName)}</span><span class="tdur">${fmtDur(p.seconds)}</span>`;
+    weekTimeSummaryEl.appendChild(header);
+
+    for (const e of p.entries) {
+      const row = document.createElement('div');
+      row.className = 'time-entry sub';
+      row.innerHTML =
+        `<span class="tnote-slot"><span class="week-time-note">${esc(e.note || '—')}</span></span>` +
+        `<span class="tdur">${fmtDur(e.seconds)}</span>`;
+      weekTimeSummaryEl.appendChild(row);
+    }
+  }
+}
+
+// read-only rollup: each habit's values across the week's 7 days (Mon → Sun)
+function renderWeekHabits(note) {
+  weekHabitsSummaryEl.innerHTML = '';
+  if (!note.habits.length) {
+    weekHabitsSummaryEl.innerHTML = '<div class="habits-empty">No habits yet.</div>';
+    return;
+  }
+  const dates = [];
+  for (let i = 0; i < 7; i++) dates.push(addClientDays(note.weekStart, i));
+
+  for (const h of note.habits) {
+    const card = document.createElement('div');
+    card.className = 'ov-card';
+    card.insertAdjacentHTML('beforeend', `<div class="ov-top"><span class="ov-name" style="border:none;pointer-events:none">${esc(h.name)}</span></div>`);
+
+    const grid = document.createElement('div');
+    grid.className = 'ov-grid';
+    for (const date of dates) {
+      const dd = new Date(date + 'T00:00:00');
+      const v = h.values[date];
+      const done = h.type === 'check' ? v === true : v != null && String(v).trim() !== '';
+      const cell = document.createElement('div');
+      cell.className = 'ov-cell' + (done ? ' done' : '');
+      cell.title = date;
+      const label = dd.toLocaleDateString(undefined, { weekday: 'short' });
+      const shown = h.type === 'value' && done ? `<span class="v">${esc(String(v))}</span>` : done ? '✓' : '·';
+      cell.innerHTML = `<span class="d">${label}</span>${shown}`;
+      grid.appendChild(cell);
+    }
+    card.appendChild(grid);
+    weekHabitsSummaryEl.appendChild(card);
+  }
+}
+
+// read-only rollup: each day's learnings text, Monday → Sunday
+function renderWeekLearnings(note) {
+  weekLearningsSummaryEl.innerHTML = '';
+  const withText = note.learnings.filter((l) => l.content && l.content.trim());
+  if (!withText.length) {
+    weekLearningsSummaryEl.innerHTML = '<div class="habits-empty">No learnings logged this week.</div>';
+    return;
+  }
+  for (const l of withText) {
+    const dd = new Date(l.date + 'T00:00:00');
+    const block = document.createElement('div');
+    block.className = 'week-learning-block';
+    block.innerHTML = `<h4>${esc(dd.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }))}</h4><div class="week-learning-text"></div>`;
+    block.querySelector('.week-learning-text').textContent = l.content;
+    weekLearningsSummaryEl.appendChild(block);
+  }
 }
 
 function ensureWeekVisible(ws) {
@@ -975,7 +1347,7 @@ function scheduleWeekSave() {
 
 async function flushWeekSave() {
   if (!currentWeek || !weekEditable) return;
-  const res = await fetch(`/api/week-note/${currentWeek}`, {
+  const res = await apiFetch(`/api/week-note/${currentWeek}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content: weekEditor.value }),
@@ -991,6 +1363,34 @@ async function flushWeekSave() {
 weekEditor.addEventListener('input', scheduleWeekSave);
 weekEditor.addEventListener('blur', () => { clearTimeout(weekSaveTimer); flushWeekSave(); });
 
+function renderWeekReflexionBackdrop() {
+  weekReflexionBackdrop.innerHTML = highlightNotes(weekReflexionEditor.value);
+}
+function autoGrowWeekReflexionEditor() {
+  weekReflexionEditor.style.height = 'auto';
+  weekReflexionEditor.style.height = weekReflexionEditor.scrollHeight + 'px';
+}
+weekReflexionEditor.addEventListener('input', renderWeekReflexionBackdrop);
+weekReflexionEditor.addEventListener('input', autoGrowWeekReflexionEditor);
+weekReflexionEditor.addEventListener('input', scheduleWeekReflexionSave);
+weekReflexionEditor.addEventListener('blur', () => { clearTimeout(weekReflexionSaveTimer); flushWeekReflexionSave(); });
+
+function scheduleWeekReflexionSave() {
+  statusEl.textContent = 'Editing…';
+  clearTimeout(weekReflexionSaveTimer);
+  weekReflexionSaveTimer = setTimeout(flushWeekReflexionSave, 600);
+}
+
+async function flushWeekReflexionSave() {
+  if (!currentWeek || !weekEditable) return;
+  const res = await apiFetch(`/api/week-reflexion/${currentWeek}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: weekReflexionEditor.value }),
+  });
+  statusEl.textContent = res.ok ? 'Saved ✓' : '⚠ Could not save';
+}
+
 // --- view switching ---------------------------------------------------------
 async function switchView(next) {
   view = next;
@@ -998,6 +1398,8 @@ async function switchView(next) {
   habitsView.hidden = next !== 'habits';
   cyclesView.hidden = next !== 'cycles';
   timeView.hidden = next !== 'time';
+  checklistView.hidden = next !== 'checklist';
+  lifeView.hidden = next !== 'life';
   // sidebar contents per view
   journalControls.hidden = next !== 'journal';
   dayList.hidden = next !== 'journal';
@@ -1009,12 +1411,252 @@ async function switchView(next) {
   if (next === 'habits') await loadHabitsTab();
   if (next === 'cycles') await loadCycles();
   if (next === 'time') await loadTimeTab();
+  if (next === 'checklist') await loadChecklists();
+  if (next === 'life') await openLife();
 }
 navTabs.forEach((t) => (t.onclick = () => switchView(t.dataset.view)));
 
+// --- life (Recap calendar) ---------------------------------------------------
+async function loadRecaps() {
+  const list = await apiFetch('/api/recaps').then((r) => r.json());
+  recapsCache = new Map(list.map((r) => [r.date, r.text]));
+}
+
+function shiftMonth(ym, delta) {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+async function openLife() {
+  if (!recapsCache) await loadRecaps();
+  if (!lifeMonth) lifeMonth = todayISO().slice(0, 7);
+  if (!lifeYear) lifeYear = todayISO().slice(0, 4);
+  renderLife();
+}
+
+function switchLifeMode(mode) {
+  lifeViewMode = mode;
+  lifeModeTabs.forEach((t) => t.classList.toggle('active', t.dataset.mode === mode));
+  renderLife();
+}
+lifeModeTabs.forEach((t) => (t.onclick = () => switchLifeMode(t.dataset.mode)));
+
+function renderLife() {
+  if (lifeViewMode === 'year') renderLifeYear();
+  else renderLifeMonth();
+}
+
+// jump into the Journal view, open the day, and land on its Recap tab
+async function openDayRecap(date) {
+  await switchView('journal');
+  await openDay(date);
+  switchDayPage('sentence');
+}
+
+// one line per day between start and end (inclusive), scrollable; optionally
+// inserts a sticky month divider whenever the month changes (year mode)
+function renderLifeRows(start, end, { showMonthDividers = false } = {}) {
+  lifeCalendar.innerHTML = '';
+  const list = document.createElement('div');
+  list.className = 'life-year-list';
+
+  const today = todayISO();
+  let cursor = start;
+  let lastMonth = null;
+  while (cursor <= end) {
+    const dd = new Date(cursor + 'T00:00:00');
+    if (showMonthDividers) {
+      const monthKey = cursor.slice(0, 7);
+      if (monthKey !== lastMonth) {
+        lastMonth = monthKey;
+        const divider = document.createElement('div');
+        divider.className = 'life-month-divider';
+        divider.textContent = dd.toLocaleDateString(undefined, { month: 'long' });
+        list.appendChild(divider);
+      }
+    }
+    const recap = recapsCache.get(cursor);
+    const isFuture = cursor > today;
+    const row = document.createElement('div');
+    row.className = 'life-year-row' + (cursor === today ? ' today' : '') + (isFuture ? ' future' : '') + (recap ? ' has-recap' : '');
+    const label = dd.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    row.innerHTML =
+      `<span class="life-year-date">${esc(label)}</span>` +
+      `<span class="life-year-text">${recap ? esc(recap) : ''}</span>`;
+    if (!isFuture) row.onclick = () => openDayRecap(cursor);
+    list.appendChild(row);
+    cursor = addClientDays(cursor, 1);
+  }
+  lifeCalendar.appendChild(list);
+}
+
+function renderLifeMonth() {
+  const [y, m] = lifeMonth.split('-').map(Number);
+  lifeLabel.textContent = new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  const daysInMonth = new Date(y, m, 0).getDate();
+  renderLifeRows(`${lifeMonth}-01`, `${lifeMonth}-${String(daysInMonth).padStart(2, '0')}`);
+}
+
+function renderLifeYear() {
+  lifeLabel.textContent = lifeYear;
+  renderLifeRows(`${lifeYear}-01-01`, `${lifeYear}-12-31`, { showMonthDividers: true });
+}
+
+lifePrev.onclick = () => {
+  if (lifeViewMode === 'year') lifeYear = String(Number(lifeYear) - 1);
+  else lifeMonth = shiftMonth(lifeMonth, -1);
+  renderLife();
+};
+lifeNext.onclick = () => {
+  if (lifeViewMode === 'year') lifeYear = String(Number(lifeYear) + 1);
+  else lifeMonth = shiftMonth(lifeMonth, 1);
+  renderLife();
+};
+lifeTodayBtn.onclick = () => {
+  lifeMonth = todayISO().slice(0, 7);
+  lifeYear = todayISO().slice(0, 4);
+  renderLife();
+};
+
+// --- checklists (Life > Checklist tab) --------------------------------------
+async function loadChecklists() {
+  const list = await apiFetch('/api/checklists').then((r) => r.json());
+  renderChecklists(list);
+}
+
+function renderChecklists(list) {
+  checklistList.innerHTML = '';
+  if (!list.length) {
+    checklistList.innerHTML =
+      '<div class="habits-empty">No checklists yet. Click “+ New checklist” to add one, e.g. “Evening routine”.</div>';
+    return;
+  }
+  for (const cl of list) checklistList.appendChild(buildChecklistCard(cl));
+}
+
+function buildChecklistCard(cl) {
+  const card = document.createElement('div');
+  card.className = 'ov-card checklist-card';
+
+  const top = document.createElement('div');
+  top.className = 'ov-top';
+  const nameInp = document.createElement('input');
+  nameInp.className = 'ov-name';
+  nameInp.value = cl.name;
+  nameInp.onchange = () => renameChecklist(cl.id, nameInp.value);
+  top.appendChild(nameInp);
+  top.insertAdjacentHTML('beforeend', '<span class="ov-spacer"></span>');
+  const del = document.createElement('button');
+  del.className = 'ov-del';
+  del.innerHTML = TRASH_SVG;
+  del.title = 'Delete checklist';
+  del.onclick = () => removeChecklist(cl.id, cl.name);
+  top.appendChild(del);
+  card.appendChild(top);
+
+  if (cl.items.length) {
+    const done = cl.items.filter((i) => i.checked).length;
+    card.insertAdjacentHTML('beforeend', `<div class="checklist-progress">${done} / ${cl.items.length} done today</div>`);
+  }
+
+  for (const item of cl.items) {
+    const row = document.createElement('div');
+    row.className = 'habit-row';
+    const control = document.createElement('div');
+    control.className = 'control control-check';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = item.checked;
+    cb.onchange = () => toggleChecklistItem(item.id, cb.checked);
+    control.appendChild(cb);
+    row.appendChild(control);
+    row.insertAdjacentHTML('beforeend', `<span class="name">${esc(item.text)}</span>`);
+    const delItem = document.createElement('button');
+    delItem.className = 'del';
+    delItem.textContent = '✕';
+    delItem.title = 'Delete item';
+    delItem.onclick = () => removeChecklistItem(cl.id, item.id);
+    row.appendChild(delItem);
+    card.appendChild(row);
+  }
+
+  const addRow = document.createElement('div');
+  addRow.className = 'checklist-add-row';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = '+ Add item';
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && input.value.trim()) {
+      addChecklistItem(cl.id, input.value.trim());
+      input.value = '';
+    }
+  });
+  addRow.appendChild(input);
+  card.appendChild(addRow);
+
+  return card;
+}
+
+async function toggleChecklistItem(itemId, checked) {
+  await apiFetch('/api/checklist-check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ itemId, checked }),
+  });
+  loadChecklists();
+}
+
+async function addChecklist() {
+  const v = await openModal({
+    title: 'New checklist',
+    submitLabel: 'Create',
+    fields: [{ key: 'name', label: 'Name', placeholder: 'e.g. Evening routine', required: true }],
+  });
+  if (!v) return;
+  const res = await apiFetch('/api/checklists', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: v.name.trim() }),
+  });
+  if (res.ok) loadChecklists();
+  else alert((await res.json()).error || 'Could not create checklist');
+}
+addChecklistBtn.onclick = addChecklist;
+
+async function renameChecklist(id, name) {
+  const res = await apiFetch(`/api/checklists/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (res.ok) loadChecklists();
+}
+
+async function removeChecklist(id, name) {
+  if (!confirm(`Delete checklist "${name}"? Its items will be removed too.`)) return;
+  const res = await apiFetch(`/api/checklists/${id}`, { method: 'DELETE' });
+  if (res.ok) loadChecklists();
+}
+
+async function addChecklistItem(checklistId, text) {
+  const res = await apiFetch(`/api/checklists/${checklistId}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  if (res.ok) loadChecklists();
+  else alert((await res.json()).error || 'Could not add item');
+}
+
+async function removeChecklistItem(checklistId, itemId) {
+  const res = await apiFetch(`/api/checklists/${checklistId}/items/${itemId}`, { method: 'DELETE' });
+  if (res.ok) loadChecklists();
+}
+
 // --- cycles -----------------------------------------------------------------
 async function loadCycles(selectId) {
-  const cycles = await fetch('/api/cycles').then((r) => r.json());
+  const cycles = await apiFetch('/api/cycles').then((r) => r.json());
   cycleList.innerHTML = '';
   if (!cycles.length) {
     cycleList.innerHTML = '<li style="cursor:default;color:var(--muted)">No cycles yet. Click “+ New cycle”.</li>';
@@ -1044,7 +1686,7 @@ async function loadCycles(selectId) {
 }
 
 async function openCycle(id) {
-  const c = await fetch(`/api/cycle/${id}`).then((r) => r.json());
+  const c = await apiFetch(`/api/cycle/${id}`).then((r) => r.json());
   if (c.error) return;
   currentCycle = id;
   cycleEditable = c.editable;
@@ -1058,6 +1700,7 @@ async function openCycle(id) {
   cycleEditor.disabled = !c.editable;
   cycleReadonlyNote.hidden = c.editable;
   renderCycleMeta(c);
+  renderCycleTimeProgress(c);
   renderProgress(c);
   renderProgressList(c);
   renderGoals(c);
@@ -1116,10 +1759,11 @@ function renderGoals(c) {
     const item = document.createElement('div');
     item.className = 'goal-item';
 
+    const unit = g.unit ? ' ' + esc(g.unit) : '';
     const top = document.createElement('div');
     top.className = 'goal-top';
     top.insertAdjacentHTML('beforeend', `<span class="goal-name">${esc(g.label || g.habitName)}</span>`);
-    top.insertAdjacentHTML('beforeend', `<span class="goal-count">${g.current} / </span>`);
+    top.insertAdjacentHTML('beforeend', `<span class="goal-count">${g.current}${unit} / </span>`);
 
     const targetInp = document.createElement('input');
     targetInp.className = 'goal-edit-target';
@@ -1130,11 +1774,12 @@ function renderGoals(c) {
     targetInp.title = 'Target';
     targetInp.onchange = () => editGoal(g.id, { target: targetInp.value }, c.id);
     top.appendChild(targetInp);
+    if (unit) top.insertAdjacentHTML('beforeend', `<span class="goal-count">${unit}</span>`);
 
     if (c.editable) {
       const del = document.createElement('button');
       del.className = 'goal-del';
-      del.textContent = '🗑';
+      del.innerHTML = TRASH_SVG;
       del.title = 'Delete goal';
       del.onclick = () => deleteGoal_(g.id, g.label || g.habitName, c.id);
       top.appendChild(del);
@@ -1150,35 +1795,69 @@ function renderGoals(c) {
 
 async function addGoal() {
   if (!currentCycle) return;
-  const habits = await fetch('/api/habits').then((r) => r.json());
-  if (!habits.length) return alert('Create a habit first, then set a goal for it.');
+  const [habits, projects] = await Promise.all([
+    apiFetch('/api/habits').then((r) => r.json()),
+    apiFetch('/api/projects').then((r) => r.json()),
+  ]);
+  if (!habits.length && !projects.length) return alert('Create a habit or project first, then set a goal for it.');
   const v = await openModal({
     title: 'New goal',
     submitLabel: 'Add goal',
     fields: [
       {
+        key: 'source',
+        label: 'Based on',
+        type: 'select',
+        options: [
+          { value: 'habit', label: 'Habit' },
+          { value: 'time', label: 'Time tracked (project)' },
+        ],
+      },
+      {
         key: 'habitId',
         label: 'Habit',
         type: 'select',
         options: habits.map((h) => ({ value: h.id, label: h.name + (h.type === 'value' ? ` (${h.unit || 'value'})` : '') })),
+        showIf: (x) => x.source !== 'time',
       },
-      { key: 'target', label: 'Target', inputMode: 'decimal', placeholder: 'e.g. 25', required: true },
+      {
+        key: 'projectId',
+        label: 'Project',
+        type: 'select',
+        options: projects.map((p) => ({ value: p.id, label: p.name })),
+        showIf: (x) => x.source === 'time',
+      },
+      {
+        key: 'target',
+        label: 'Target',
+        inputMode: 'decimal',
+        placeholder: 'e.g. 25 (or hours, for time goals)',
+        required: true,
+      },
     ],
   });
   if (!v) return;
   if (!(Number(v.target) > 0)) return alert('Target must be a positive number.');
-  const habit = habits.find((h) => h.id === v.habitId);
-  const res = await fetch('/api/goals', {
+  const isTime = v.source === 'time';
+  if (isTime && !projects.length) return alert('Create a project first, then set a time goal for it.');
+  if (!isTime && !habits.length) return alert('Create a habit first, then set a goal for it.');
+  const label = isTime
+    ? (projects.find((p) => p.id === v.projectId) || {}).name || ''
+    : (habits.find((h) => h.id === v.habitId) || {}).name || '';
+  const body = { cycleId: currentCycle, target: v.target, label };
+  if (isTime) body.projectId = v.projectId;
+  else body.habitId = v.habitId;
+  const res = await apiFetch('/api/goals', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cycleId: currentCycle, habitId: v.habitId, target: v.target, label: habit ? habit.name : '' }),
+    body: JSON.stringify(body),
   });
   if (res.ok) loadCycles(currentCycle);
   else alert((await res.json()).error || 'Could not add goal');
 }
 
 async function editGoal(id, patch, cycleId) {
-  const res = await fetch(`/api/goals/${id}`, {
+  const res = await apiFetch(`/api/goals/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch),
@@ -1188,7 +1867,7 @@ async function editGoal(id, patch, cycleId) {
 
 async function deleteGoal_(id, name, cycleId) {
   if (!confirm(`Delete goal "${name}"?`)) return;
-  const res = await fetch(`/api/goals/${id}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/goals/${id}`, { method: 'DELETE' });
   if (res.ok) loadCycles(cycleId);
 }
 
@@ -1215,7 +1894,7 @@ function renderOkrs(c) {
     if (c.editable) {
       const del = document.createElement('button');
       del.className = 'okr-del';
-      del.textContent = '🗑';
+      del.innerHTML = TRASH_SVG;
       del.title = 'Delete OKR';
       del.onclick = () => deleteOkr(o.id, o.title, c.id);
       row.appendChild(del);
@@ -1225,7 +1904,7 @@ function renderOkrs(c) {
     const habits = document.createElement('div');
     habits.className = 'okr-habits';
     if (o.habits.length) {
-      habits.innerHTML = o.habits.map((h) => `<span class="pill">✅ ${esc(h.name)}</span>`).join('');
+      habits.innerHTML = o.habits.map((h) => `<span class="pill">${esc(h.name)}</span>`).join('');
     } else {
       habits.innerHTML = '<span class="none">No habits linked — link them from the Habits tab.</span>';
     }
@@ -1244,7 +1923,7 @@ async function addOkr() {
     ],
   });
   if (!v) return;
-  const res = await fetch('/api/okrs', {
+  const res = await apiFetch('/api/okrs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ cycleId: currentCycle, title: v.title.trim() }),
@@ -1254,7 +1933,7 @@ async function addOkr() {
 }
 
 async function editOkr(id, patch, cycleId) {
-  const res = await fetch(`/api/okrs/${id}`, {
+  const res = await apiFetch(`/api/okrs/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch),
@@ -1264,7 +1943,7 @@ async function editOkr(id, patch, cycleId) {
 
 async function deleteOkr(id, title, cycleId) {
   if (!confirm(`Delete OKR "${title}"? Habits linked to it will be unlinked.`)) return;
-  const res = await fetch(`/api/okrs/${id}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/okrs/${id}`, { method: 'DELETE' });
   if (res.ok) openCycle(cycleId);
 }
 
@@ -1287,13 +1966,13 @@ function renderCycleMeta(c) {
 
   const del = document.createElement('button');
   del.className = 'del-cycle';
-  del.textContent = '🗑 Delete cycle';
+  del.innerHTML = TRASH_SVG + ' Delete cycle';
   del.onclick = () => deleteCycle_(c.id, c.name);
   cycleMeta.appendChild(del);
 }
 
 async function editCycle(id, patch) {
-  const res = await fetch(`/api/cycles/${id}`, {
+  const res = await apiFetch(`/api/cycles/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch),
@@ -1313,7 +1992,7 @@ async function addCycle() {
     ],
   });
   if (!v) return;
-  const res = await fetch('/api/cycles', {
+  const res = await apiFetch('/api/cycles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: v.name.trim(), start: v.start, end: v.end }),
@@ -1325,7 +2004,7 @@ async function addCycle() {
 
 async function deleteCycle_(id, name) {
   if (!confirm(`Delete cycle "${name}"? Its notes will be removed. Your daily entries stay untouched.`)) return;
-  const res = await fetch(`/api/cycles/${id}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/cycles/${id}`, { method: 'DELETE' });
   if (res.ok) {
     if (currentCycle === id) currentCycle = null;
     loadCycles();
@@ -1340,7 +2019,7 @@ function scheduleCycleSave() {
 
 async function saveCycleNotes() {
   if (!currentCycle || !cycleEditable) return;
-  const res = await fetch(`/api/cycle/${currentCycle}/notes`, {
+  const res = await apiFetch(`/api/cycle/${currentCycle}/notes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content: cycleEditor.value }),
@@ -1357,7 +2036,7 @@ cycleEditor.addEventListener('blur', () => { clearTimeout(cycleSaveTimer); saveC
 // --- Habits tab: sidebar list + per-habit detail page -----------------------
 let habitsCache = [];
 async function loadHabitsTab() {
-  habitsCache = await fetch('/api/habits').then((r) => r.json());
+  habitsCache = await apiFetch('/api/habits').then((r) => r.json());
   if (openHabitId && habitsCache.some((h) => h.id === openHabitId)) showHabitDetail(openHabitId);
   else showHabitsOverview();
 }
@@ -1369,11 +2048,11 @@ function renderHabitNav() {
   // The full list always stays; the open habit (or Overview) is highlighted.
   const ov = document.createElement('li');
   ov.className = 'nav-overview' + (openHabitId ? '' : ' active');
-  ov.textContent = '📊 Overview';
+  ov.textContent = 'Overview';
   ov.onclick = showHabitsOverview;
   habitNav.appendChild(ov);
 
-  const ordered = habitsCache.slice().sort((a, b) => (a.type === 'check' ? 0 : 1) - (b.type === 'check' ? 0 : 1));
+  const ordered = habitsCache.slice();
   for (const h of ordered) {
     const li = document.createElement('li');
     li.dataset.id = h.id;
@@ -1404,7 +2083,7 @@ async function showHabitDetail(id) {
   habitDetail.hidden = false;
   renderHabitNav();
 
-  const notes = await fetch(`/api/habits/${id}/notes`).then((r) => r.json());
+  const notes = await apiFetch(`/api/habits/${id}/notes`).then((r) => r.json());
   habitNotes.value = notes.content || '';
   refreshRich(habitNotes);
   habitNotes.focus();
@@ -1416,7 +2095,7 @@ function scheduleHabitNotesSave() {
 }
 async function saveHabitNotes() {
   if (!openHabitId) return;
-  await fetch(`/api/habits/${openHabitId}/notes`, {
+  await apiFetch(`/api/habits/${openHabitId}/notes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content: habitNotes.value }),
@@ -1428,16 +2107,17 @@ habitNotes.addEventListener('blur', () => { clearTimeout(habitNotesTimer); saveH
 // --- habits overview --------------------------------------------------------
 async function loadOverview() {
   const [data, okrs, cycles] = await Promise.all([
-    fetch('/api/overview?days=14').then((r) => r.json()),
-    fetch('/api/okrs').then((r) => r.json()),
-    fetch('/api/cycles').then((r) => r.json()),
+    apiFetch('/api/overview?days=14').then((r) => r.json()),
+    apiFetch('/api/okrs').then((r) => r.json()),
+    apiFetch('/api/cycles').then((r) => r.json()),
   ]);
+  habitsCache = data.habits;
   overview.innerHTML = '';
   if (!data.habits.length) {
     overview.innerHTML = '<div class="habits-empty">No habits yet. Click “+ Add habit” to create one.</div>';
     return;
   }
-  for (const h of data.habits) {
+  for (const [index, h] of data.habits.entries()) {
     const card = document.createElement('div');
     card.className = 'ov-card';
 
@@ -1468,11 +2148,27 @@ async function loadOverview() {
 
     top.appendChild(buildOkrSelect(h, okrs, cycles));
 
-    top.insertAdjacentHTML('beforeend', `<span class="ov-streak">🔥 ${h.streak}d</span><span class="ov-spacer"></span>`);
+    const moveUp = document.createElement('button');
+    moveUp.className = 'ov-move';
+    moveUp.textContent = '↑';
+    moveUp.title = 'Move habit up';
+    moveUp.disabled = index === 0;
+    moveUp.onclick = () => moveHabit(h.id, -1);
+    top.appendChild(moveUp);
+
+    const moveDown = document.createElement('button');
+    moveDown.className = 'ov-move';
+    moveDown.textContent = '↓';
+    moveDown.title = 'Move habit down';
+    moveDown.disabled = index === data.habits.length - 1;
+    moveDown.onclick = () => moveHabit(h.id, 1);
+    top.appendChild(moveDown);
+
+    top.insertAdjacentHTML('beforeend', `<span class="ov-streak">${h.streak}d streak</span><span class="ov-spacer"></span>`);
 
     const del = document.createElement('button');
     del.className = 'ov-del';
-    del.textContent = '🗑';
+    del.innerHTML = TRASH_SVG;
     del.title = 'Delete habit';
     del.onclick = () => deleteHabit(h.id, h.name);
     top.appendChild(del);
@@ -1505,7 +2201,7 @@ function buildOkrSelect(h, okrs, cycles) {
   sel.className = 'ov-okr-select';
   const none = document.createElement('option');
   none.value = '';
-  none.textContent = '🎯 No OKR';
+  none.textContent = 'No OKR';
   sel.appendChild(none);
 
   const cycleName = (id) => (cycles.find((c) => c.id === id) || {}).name || 'Other';
@@ -1529,7 +2225,7 @@ function buildOkrSelect(h, okrs, cycles) {
 }
 
 async function editHabit(id, patch) {
-  const res = await fetch(`/api/habits/${id}`, {
+  const res = await apiFetch(`/api/habits/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch),
@@ -1537,9 +2233,37 @@ async function editHabit(id, patch) {
   if (!res.ok) loadOverview(); // revert on failure
   else if (!habitNav.hidden && !openHabitId) {
     // keep the sidebar list names in sync after an overview edit
-    habitsCache = await fetch('/api/habits').then((r) => r.json());
+    habitsCache = await apiFetch('/api/habits').then((r) => r.json());
     renderHabitNav();
   }
+}
+
+async function saveHabitOrder(ids) {
+  const res = await apiFetch('/api/habits/order', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => null);
+    statusEl.textContent = '⚠ Could not save habit order' + (json && json.error ? `: ${json.error}` : '');
+    return false;
+  }
+  return true;
+}
+
+async function moveHabit(id, direction) {
+  const index = habitsCache.findIndex((h) => h.id === id);
+  if (index === -1) return;
+  const targetIndex = index + direction;
+  if (targetIndex < 0 || targetIndex >= habitsCache.length) return;
+  const reordered = habitsCache.slice();
+  [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+  const ids = reordered.map((h) => h.id);
+  if (!(await saveHabitOrder(ids))) return;
+  habitsCache = reordered;
+  renderHabitNav();
+  loadOverview();
 }
 
 addHabitBtn.onclick = addHabit;
@@ -1557,7 +2281,7 @@ function scheduleSummarySave() {
 }
 async function saveSummary() {
   if (!current || !editable) return;
-  const res = await fetch(`/api/summary/${current}`, {
+  const res = await apiFetch(`/api/summary/${current}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text: summaryInput.value }),

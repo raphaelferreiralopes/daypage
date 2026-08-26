@@ -1,0 +1,17 @@
+{
+  "name": "journal-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A personal daily journal, habits, cycles/OKRs and time tracker.",
+  "main": "api/index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "node --env-file=.env api/index.js",
+    "migrate": "node --env-file=.env scripts/migrate-to-supabase.js",
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "express": "^4.19.2"
+  }
+}
