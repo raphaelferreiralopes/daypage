@@ -262,10 +262,17 @@ async function loadDays() {
   if (!weekMap.has(cws)) {
     weekMap.set(cws, { weekStart: cws, weekEnd: addClientDays(cws, 6), isCurrent: true, hasWeekNote: false, days: [] });
   }
-  // always include today in its week
-  const todayWeek = weekMap.get(cws);
-  if (!todayWeek.days.some((d) => d.date === today)) {
-    todayWeek.days.push({ date: today, isToday: true, hasEntry: false });
+
+  // fill in every past/today day of each week, so days without a saved
+  // entry still show up as empty placeholders instead of gaps in the list.
+  for (const week of weekMap.values()) {
+    const existing = new Set(week.days.map((d) => d.date));
+    const lastDay = week.weekEnd < today ? week.weekEnd : today;
+    for (let date = week.weekStart; date <= lastDay; date = addClientDays(date, 1)) {
+      if (!existing.has(date)) {
+        week.days.push({ date, isToday: date === today, hasEntry: false });
+      }
+    }
   }
 
   // build dayTree: year → month (of Monday) → [weekObj]
