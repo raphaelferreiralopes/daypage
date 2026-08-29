@@ -122,6 +122,16 @@ const cyclePages = {
   progress: document.getElementById('cyclePageProgress'),
 };
 
+// yearly goals
+const goalsView = document.getElementById('goalsView');
+const goalsPrev = document.getElementById('goalsPrev');
+const goalsNext = document.getElementById('goalsNext');
+const goalsYearLabel = document.getElementById('goalsYearLabel');
+const goalsTodayBtn = document.getElementById('goalsTodayBtn');
+const addYearGoalBtn = document.getElementById('addYearGoalBtn');
+const goalsOverallProgress = document.getElementById('goalsOverallProgress');
+const yearGoalList = document.getElementById('yearGoalList');
+
 // modal
 const modalOverlay = document.getElementById('modalOverlay');
 const modalTitle = document.getElementById('modalTitle');
@@ -1412,6 +1422,7 @@ async function switchView(next) {
   timeView.hidden = next !== 'time';
   checklistView.hidden = next !== 'checklist';
   lifeView.hidden = next !== 'life';
+  goalsView.hidden = next !== 'goals';
   // sidebar contents per view
   journalControls.hidden = next !== 'journal';
   dayList.hidden = next !== 'journal';
@@ -1425,6 +1436,7 @@ async function switchView(next) {
   if (next === 'time') await loadTimeTab();
   if (next === 'checklist') await loadChecklists();
   if (next === 'life') await openLife();
+  if (next === 'goals') await loadYearGoals();
 }
 navTabs.forEach((t) => (t.onclick = () => switchView(t.dataset.view)));
 
@@ -1882,6 +1894,204 @@ async function deleteGoal_(id, name, cycleId) {
   const res = await apiFetch(`/api/goals/${id}`, { method: 'DELETE' });
   if (res.ok) loadCycles(cycleId);
 }
+
+// --- yearly goals -----------------------------------------------------------
+let goalsYear = null;
+let goalsCycleId = null;
+
+async function loadYearGoals() {
+  if (!goalsYear) goalsYear = Number(todayISO().slice(0, 4));
+  await openYearGoals();
+}
+
+async function openYearGoals() {
+  const y = await apiFetch(`/api/years/${goalsYear}/goals`).then((r) => r.json());
+  goalsCycleId = y.cycleId;
+  goalsYearLabel.textContent = y.year;
+  goalsTodayBtn.hidden = y.year === Number(todayISO().slice(0, 4));
+  renderYearOverallProgress(y);
+  renderYearGoalList(y);
+}
+
+function renderYearOverallProgress(y) {
+  if (y.overall == null) {
+    goalsOverallProgress.innerHTML = '';
+    return;
+  }
+  goalsOverallProgress.innerHTML =
+    `<div class="cycle-progress-label"><span>Overall progress</span><span>${y.overall}%</span></div>` +
+    `<div class="bar big${y.overall >= 100 ? ' done' : ''}"><span style="width:${y.overall}%"></span></div>`;
+}
+
+function renderYearGoalList(y) {
+  yearGoalList.innerHTML = '';
+  if (!y.goals.length) {
+    yearGoalList.innerHTML = '<div class="okr-habits"><span class="none">No goals yet for this year. Add one below.</span></div>';
+    return;
+  }
+  for (const g of y.goals) {
+    const item = document.createElement('div');
+    item.className = 'goal-item';
+
+    if (g.kind === 'manual') {
+      const top = document.createElement('div');
+      top.className = 'goal-top habit-row';
+      const control = document.createElement('div');
+      control.className = 'control control-check';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = g.achieved;
+      cb.onchange = () => editYearGoal(g.id, { achieved: cb.checked });
+      control.appendChild(cb);
+      top.appendChild(control);
+      top.insertAdjacentHTML('beforeend', `<span class="goal-name">${esc(g.label)}</span>`);
+
+      const del = document.createElement('button');
+      del.className = 'goal-del';
+      del.innerHTML = TRASH_SVG;
+      del.title = 'Delete goal';
+      del.onclick = () => deleteYearGoal_(g.id, g.label);
+      top.appendChild(del);
+
+      item.appendChild(top);
+      item.insertAdjacentHTML('beforeend', `<div class="bar${g.achieved ? ' done' : ''}"><span style="width:${g.achieved ? 100 : 0}%"></span></div>`);
+      yearGoalList.appendChild(item);
+      continue;
+    }
+
+    const unit = g.unit ? ' ' + esc(g.unit) : '';
+    const top = document.createElement('div');
+    top.className = 'goal-top';
+    top.insertAdjacentHTML('beforeend', `<span class="goal-name">${esc(g.label || g.habitName)}</span>`);
+    top.insertAdjacentHTML('beforeend', `<span class="goal-count">${g.current}${unit} / </span>`);
+
+    const targetInp = document.createElement('input');
+    targetInp.className = 'goal-edit-target';
+    targetInp.type = 'text';
+    targetInp.inputMode = 'decimal';
+    targetInp.value = g.target;
+    targetInp.title = 'Target';
+    targetInp.onchange = () => editYearGoal(g.id, { target: targetInp.value });
+    top.appendChild(targetInp);
+    if (unit) top.insertAdjacentHTML('beforeend', `<span class="goal-count">${unit}</span>`);
+
+    const del = document.createElement('button');
+    del.className = 'goal-del';
+    del.innerHTML = TRASH_SVG;
+    del.title = 'Delete goal';
+    del.onclick = () => deleteYearGoal_(g.id, g.label || g.habitName);
+    top.appendChild(del);
+
+    item.appendChild(top);
+    item.insertAdjacentHTML('beforeend', `<div class="bar${g.pct >= 100 ? ' done' : ''}"><span style="width:${g.pct}%"></span></div>`);
+    yearGoalList.appendChild(item);
+  }
+}
+
+async function addYearGoal() {
+  if (!goalsCycleId) return;
+  const [habits, projects] = await Promise.all([
+    apiFetch('/api/habits').then((r) => r.json()),
+    apiFetch('/api/projects').then((r) => r.json()),
+  ]);
+  const v = await openModal({
+    title: 'New yearly goal',
+    submitLabel: 'Add goal',
+    fields: [
+      {
+        key: 'source',
+        label: 'Based on',
+        type: 'select',
+        options: [
+          { value: 'habit', label: 'Habit' },
+          { value: 'time', label: 'Time tracked (project)' },
+          { value: 'manual', label: 'Yes/No outcome' },
+        ],
+      },
+      {
+        key: 'habitId',
+        label: 'Habit',
+        type: 'select',
+        options: habits.map((h) => ({ value: h.id, label: h.name + (h.type === 'value' ? ` (${h.unit || 'value'})` : '') })),
+        showIf: (x) => x.source !== 'time' && x.source !== 'manual',
+      },
+      {
+        key: 'projectId',
+        label: 'Project',
+        type: 'select',
+        options: projects.map((p) => ({ value: p.id, label: p.name })),
+        showIf: (x) => x.source === 'time',
+      },
+      {
+        key: 'label',
+        label: 'Goal',
+        placeholder: 'e.g. Run a marathon',
+        showIf: (x) => x.source === 'manual',
+        required: true,
+      },
+      {
+        key: 'target',
+        label: 'Target',
+        inputMode: 'decimal',
+        placeholder: 'e.g. 25 (or hours, for time goals)',
+        required: true,
+        showIf: (x) => x.source !== 'manual',
+      },
+    ],
+  });
+  if (!v) return;
+
+  const body = { cycleId: goalsCycleId };
+  if (v.source === 'manual') {
+    body.label = v.label;
+  } else {
+    if (!(Number(v.target) > 0)) return alert('Target must be a positive number.');
+    const isTime = v.source === 'time';
+    if (isTime && !projects.length) return alert('Create a project first, then set a time goal for it.');
+    if (!isTime && !habits.length) return alert('Create a habit first, then set a goal for it.');
+    body.target = v.target;
+    body.label = isTime ? (projects.find((p) => p.id === v.projectId) || {}).name || '' : (habits.find((h) => h.id === v.habitId) || {}).name || '';
+    if (isTime) body.projectId = v.projectId;
+    else body.habitId = v.habitId;
+  }
+
+  const res = await apiFetch('/api/goals', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (res.ok) openYearGoals();
+  else alert((await res.json()).error || 'Could not add goal');
+}
+
+async function editYearGoal(id, patch) {
+  const res = await apiFetch(`/api/goals/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (res.ok) openYearGoals();
+}
+
+async function deleteYearGoal_(id, name) {
+  if (!confirm(`Delete goal "${name}"?`)) return;
+  const res = await apiFetch(`/api/goals/${id}`, { method: 'DELETE' });
+  if (res.ok) openYearGoals();
+}
+
+goalsPrev.onclick = () => {
+  goalsYear -= 1;
+  openYearGoals();
+};
+goalsNext.onclick = () => {
+  goalsYear += 1;
+  openYearGoals();
+};
+goalsTodayBtn.onclick = () => {
+  goalsYear = Number(todayISO().slice(0, 4));
+  openYearGoals();
+};
+addYearGoalBtn.onclick = addYearGoal;
 
 // --- OKRs (on the cycle page) ----------------------------------------------
 function renderOkrs(c) {

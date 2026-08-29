@@ -125,6 +125,16 @@ app.post(
   })
 );
 
+// --- yearly goals --------------------------------------------------------
+app.get(
+  '/api/years/:year/goals',
+  h(async (req, res) => {
+    const year = Number(req.params.year);
+    if (!Number.isInteger(year) || year < 1970 || year > 9999) return res.status(400).json({ error: 'Bad year' });
+    res.json(await db.yearGoals(req.supabase, req.userId, year));
+  })
+);
+
 // --- OKRs ----------------------------------------------------------------
 app.get('/api/okrs', h(async (req, res) => res.json(await db.listOkrs(req.supabase, req.userId, req.query.cycleId))));
 app.post('/api/okrs', h(async (req, res) => res.json(await db.createOkr(req.supabase, req.userId, req.body))));
