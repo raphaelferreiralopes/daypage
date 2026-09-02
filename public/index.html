@@ -6,6 +6,28 @@
   <meta name="color-scheme" content="light dark" />
   <meta name="description" content="A private daily journal with notes, time tracking, habits, cycles, and goals — one place for your day." />
   <title>Journal</title>
+  <script>
+    // If a Supabase session is already sitting in localStorage, skip the landing
+    // page entirely and go straight to /app — no flash of marketing content,
+    // no extra sign-in click. app.html/auth.js still validate the session for
+    // real; this is just a fast, best-effort redirect based on its presence.
+    (function () {
+      try {
+        for (var i = 0; i < localStorage.length; i++) {
+          var key = localStorage.key(i);
+          if (!key || key.indexOf('sb-') !== 0 || key.indexOf('-auth-token') !== key.length - '-auth-token'.length) continue;
+          var raw = localStorage.getItem(key);
+          if (!raw) continue;
+          var parsed = JSON.parse(raw);
+          var token = parsed && (parsed.access_token || (parsed.currentSession && parsed.currentSession.access_token));
+          if (token) {
+            location.replace('/app');
+            break;
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="/landing.css" />
 </head>
 <body>
