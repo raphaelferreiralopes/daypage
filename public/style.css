@@ -400,6 +400,7 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 #habitNav li.active, #projectNav li.active { background: var(--accent-soft); color: var(--text); font-weight: 500; }
 #habitNav li.nav-overview, #projectNav li.nav-overview { color: var(--text); font-weight: 600; border-bottom: 1px solid var(--border); border-radius: 0; margin-bottom: 4px; padding-bottom: 10px; }
 #habitNav li .type-dot { font-size: 11px; color: var(--faint); }
+#projectNav li.nav-child { padding-left: 26px; }
 
 /* habit / project detail page — a clean, blank writing surface */
 #habitDetail, #projectDetail { flex: 1; display: flex; flex-direction: column; min-height: 0; }
@@ -423,11 +424,18 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
   padding: 14px 16px; background: var(--panel); box-shadow: var(--shadow-sm);
 }
 .tp-card.archived { opacity: 0.6; }
-.tp-status {
+.tp-card.tp-child { margin-left: 26px; padding: 10px 14px; }
+.tp-card.tp-child .tp-name { font-size: 13.5px; font-weight: 500; }
+.tp-status, .tp-parent {
   background: var(--bg); border: 1px solid var(--border-strong); border-radius: 20px;
   color: var(--muted); padding: 3px 9px; font-size: 12px; cursor: pointer;
 }
-.tp-status:hover { border-color: var(--accent); }
+.tp-status:hover, .tp-parent:hover { border-color: var(--accent); }
+.tp-add-sub {
+  align-self: flex-start; margin-left: 26px; background: none; border: none;
+  color: var(--muted); font-size: 12px; cursor: pointer; padding: 2px 4px;
+}
+.tp-add-sub:hover { color: var(--accent); }
 .tp-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .tp-name {
   flex: 1; font-size: 14.5px; font-weight: 600; background: transparent; border: none;

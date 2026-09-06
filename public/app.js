@@ -573,12 +573,40 @@ function trackableProjects() {
   return projects.filter((p) => (p.status || 'active') !== 'archive');
 }
 
+// Parents first, each immediately followed by its own children — every
+// select/list of projects reads top-to-bottom by hierarchy this way instead
+// of being scattered by creation order. Depth is computed off the full
+// project list so a child still nests correctly even if `list` was
+// pre-filtered (e.g. to trackable projects only) and its parent got excluded.
+function orderedProjectRows(list) {
+  const included = new Set(list.map((p) => p.id));
+  const byParent = new Map();
+  for (const p of projects) {
+    const key = p.parentId || null;
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key).push(p);
+  }
+  const out = [];
+  const walk = (parentId, depth) => {
+    for (const p of byParent.get(parentId) || []) {
+      if (included.has(p.id)) out.push({ project: p, depth });
+      walk(p.id, depth + 1);
+    }
+  };
+  walk(null, 0);
+  return out;
+}
+
+function projectOptionLabel(p, depth) {
+  return depth ? `↳ ${p.name}` : p.name;
+}
+
 async function loadProjects() {
   projects = await apiFetch('/api/projects').then((r) => r.json());
   const keep = timerProject.value;
-  const selectable = trackableProjects();
-  timerProject.innerHTML = selectable.length
-    ? selectable.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')
+  const rows = orderedProjectRows(trackableProjects());
+  timerProject.innerHTML = rows.length
+    ? rows.map(({ project: p, depth }) => `<option value="${p.id}">${esc(projectOptionLabel(p, depth))}</option>`).join('')
     : '<option value="" disabled selected>No active projects</option>';
   if (keep) timerProject.value = keep;
 }
@@ -776,17 +804,29 @@ async function toggleTimer() {
   }
 }
 
-async function newProject() {
-  const v = await openModal({
-    title: 'New project',
-    submitLabel: 'Create',
-    fields: [{ key: 'name', label: 'Project name', placeholder: 'e.g. Scolaria', required: true }],
-  });
+// `presetParentId`, when given, creates a sub-project directly under that
+// parent without asking (used by each parent card's "+ Add sub-project").
+// Omit it for a regular "New project", which lets you optionally pick a
+// top-level project as parent — nesting only goes two levels deep, so the
+// parent picker only ever lists top-level projects.
+async function newProject(presetParentId) {
+  const fields = [{ key: 'name', label: 'Project name', placeholder: 'e.g. Scolaria', required: true }];
+  if (presetParentId === undefined) {
+    const topLevel = projects.filter((p) => !p.parentId);
+    fields.push({
+      key: 'parentId',
+      label: 'Parent project (optional)',
+      type: 'select',
+      options: [{ value: '', label: '— none (top-level) —' }, ...topLevel.map((p) => ({ value: p.id, label: p.name }))],
+    });
+  }
+  const v = await openModal({ title: presetParentId ? 'New sub-project' : 'New project', submitLabel: 'Create', fields });
   if (!v) return;
+  const parentId = presetParentId !== undefined ? presetParentId : v.parentId || null;
   const res = await apiFetch('/api/projects', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: v.name.trim() }),
+    body: JSON.stringify({ name: v.name.trim(), parentId }),
   });
   const created = await res.json();
   if (res.ok) {
@@ -801,7 +841,12 @@ async function logTime() {
     title: 'Log time',
     submitLabel: 'Add',
     fields: [
-      { key: 'projectId', label: 'Project', type: 'select', options: trackableProjects().map((p) => ({ value: p.id, label: p.name })) },
+      {
+        key: 'projectId',
+        label: 'Project',
+        type: 'select',
+        options: orderedProjectRows(trackableProjects()).map(({ project: p, depth }) => ({ value: p.id, label: projectOptionLabel(p, depth) })),
+      },
       { key: 'hours', label: 'Hours', inputMode: 'numeric', placeholder: '0', value: '0' },
       { key: 'minutes', label: 'Minutes', inputMode: 'numeric', placeholder: '30', value: '0' },
       { key: 'note', label: 'Note', placeholder: 'What did you do? (optional)' },
@@ -840,9 +885,10 @@ function renderProjectNav() {
   ov.onclick = showProjectsOverview;
   projectNav.appendChild(ov);
 
-  for (const p of projects) {
+  for (const { project: p, depth } of orderedProjectRows(projects)) {
     const li = document.createElement('li');
     li.dataset.id = p.id;
+    if (depth) li.classList.add('nav-child');
     if (p.id === openProjectId) li.classList.add('active');
     li.innerHTML = `<span>${esc(p.name)}</span>`;
     li.onclick = () => showProjectDetail(p.id);
@@ -904,9 +950,19 @@ async function loadTimeOverview() {
     projectOverview.innerHTML = '<div class="habits-empty">No projects yet. Create one to start tracking time.</div>';
     return;
   }
-  const max = Math.max(...data.projects.map((p) => p.total), 1);
+
+  const childrenOf = new Map();
+  for (const p of data.projects) {
+    if (!p.parentId) continue;
+    if (!childrenOf.has(p.parentId)) childrenOf.set(p.parentId, []);
+    childrenOf.get(p.parentId).push(p);
+  }
+  const topLevel = data.projects.filter((p) => !p.parentId);
+  const topLevelOptions = topLevel.map((p) => ({ id: p.id, name: p.name }));
+  const max = Math.max(...topLevel.map((p) => p.rollup.total), 1);
+
   for (const status of STATUS_ORDER) {
-    const inGroup = data.projects.filter((p) => (p.status || 'active') === status);
+    const inGroup = topLevel.filter((p) => (p.status || 'active') === status).sort((a, b) => b.rollup.total - a.rollup.total);
     if (!inGroup.length) continue;
 
     const header = document.createElement('div');
@@ -915,14 +971,23 @@ async function loadTimeOverview() {
     projectOverview.appendChild(header);
 
     for (const p of inGroup) {
-      projectOverview.appendChild(projectCard(p, max, data.currentCycle));
+      const kids = (childrenOf.get(p.id) || []).sort((a, b) => b.rollup.total - a.rollup.total);
+      projectOverview.appendChild(projectCard(p, max, data.currentCycle, { topLevelOptions, hasChildren: kids.length > 0 }));
+      for (const kid of kids) projectOverview.appendChild(projectCard(kid, max, data.currentCycle, { child: true, topLevelOptions }));
+
+      const addSub = document.createElement('button');
+      addSub.className = 'tp-add-sub';
+      addSub.textContent = '+ Add sub-project';
+      addSub.onclick = async () => { await newProject(p.id); renderProjectNav(); loadTimeOverview(); };
+      projectOverview.appendChild(addSub);
     }
   }
 }
 
-function projectCard(p, max, currentCycle) {
+function projectCard(p, max, currentCycle, opts = {}) {
+  const stats = p.rollup;
   const card = document.createElement('div');
-  card.className = 'tp-card' + (p.status === 'archive' ? ' archived' : '');
+  card.className = 'tp-card' + (p.status === 'archive' ? ' archived' : '') + (opts.child ? ' tp-child' : '');
 
   const top = document.createElement('div');
   top.className = 'tp-top';
@@ -931,7 +996,7 @@ function projectCard(p, max, currentCycle) {
   name.value = p.name;
   name.onchange = () => renameProject(p.id, name.value);
   top.appendChild(name);
-  top.insertAdjacentHTML('beforeend', `<span class="tp-total">${fmtDur(p.total)}</span>`);
+  top.insertAdjacentHTML('beforeend', `<span class="tp-total">${fmtDur(stats.total)}</span>`);
 
   // status selector
   const sel = document.createElement('select');
@@ -946,6 +1011,25 @@ function projectCard(p, max, currentCycle) {
   sel.onchange = () => setProjectStatus(p.id, sel.value);
   top.appendChild(sel);
 
+  // parent selector — hidden once a project has sub-projects of its own,
+  // since nesting only goes two levels deep.
+  if (!opts.hasChildren) {
+    const parentSel = document.createElement('select');
+    parentSel.className = 'tp-parent';
+    parentSel.title = 'Parent project';
+    parentSel.insertAdjacentHTML('beforeend', '<option value="">— top-level —</option>');
+    for (const t of opts.topLevelOptions) {
+      if (t.id === p.id) continue;
+      const o = document.createElement('option');
+      o.value = t.id;
+      o.textContent = t.name;
+      if (p.parentId === t.id) o.selected = true;
+      parentSel.appendChild(o);
+    }
+    parentSel.onchange = () => setProjectParent(p.id, parentSel.value || null);
+    top.appendChild(parentSel);
+  }
+
   const del = document.createElement('button');
   del.className = 'tp-del';
   del.innerHTML = TRASH_SVG;
@@ -954,19 +1038,36 @@ function projectCard(p, max, currentCycle) {
   top.appendChild(del);
   card.appendChild(top);
 
-  const pct = Math.round((p.total / max) * 100);
+  const pct = Math.round((stats.total / max) * 100);
   card.insertAdjacentHTML('beforeend', `<div class="bar"><span style="width:${pct}%"></span></div>`);
 
-  const cycleStat = currentCycle ? `<span><b>${fmtDur(p.cycle)}</b> in ${esc(currentCycle.name)}</span>` : '';
+  const cycleStat = currentCycle ? `<span><b>${fmtDur(stats.cycle)}</b> in ${esc(currentCycle.name)}</span>` : '';
   card.insertAdjacentHTML(
     'beforeend',
     `<div class="tp-stats">
-      <span><b>${fmtDur(p.today)}</b> today</span>
-      <span><b>${fmtDur(p.last7)}</b> last 7 days</span>
+      <span><b>${fmtDur(stats.today)}</b> today</span>
+      <span><b>${fmtDur(stats.last7)}</b> last 7 days</span>
       ${cycleStat}
     </div>`
   );
   return card;
+}
+
+async function setProjectParent(id, parentId) {
+  const res = await apiFetch(`/api/projects/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ parentId }),
+  });
+  if (res.ok) {
+    await loadProjects();
+    renderProjectNav();
+    loadTimeOverview();
+  } else {
+    const body = await res.json().catch(() => ({}));
+    alert(body.error || 'Could not change parent project');
+    loadTimeOverview(); // revert the select back to the actual state
+  }
 }
 
 async function setProjectStatus(id, status) {
@@ -1848,7 +1949,7 @@ async function addGoal() {
         key: 'projectId',
         label: 'Project',
         type: 'select',
-        options: projects.map((p) => ({ value: p.id, label: p.name })),
+        options: orderedProjectRows(projects).map(({ project: p, depth }) => ({ value: p.id, label: projectOptionLabel(p, depth) })),
         showIf: (x) => x.source === 'time',
       },
       {
@@ -2019,7 +2120,7 @@ async function addYearGoal() {
         key: 'projectId',
         label: 'Project',
         type: 'select',
-        options: projects.map((p) => ({ value: p.id, label: p.name })),
+        options: orderedProjectRows(projects).map(({ project: p, depth }) => ({ value: p.id, label: projectOptionLabel(p, depth) })),
         showIf: (x) => x.source === 'time',
       },
       {
@@ -2524,7 +2625,7 @@ todayBtn.onclick = goToToday;
 
 // time tracker wiring
 timerToggle.onclick = toggleTimer;
-newProjectBtn.onclick = newProject;
+newProjectBtn.onclick = () => newProject();
 logTimeBtn.onclick = logTime;
 addProjectBtn.onclick = async () => { await newProject(); if (view === 'time') { renderProjectNav(); loadTimeOverview(); } };
 
