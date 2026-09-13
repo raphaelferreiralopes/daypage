@@ -304,6 +304,50 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 }
 #modalCancel:hover { background: var(--hover); }
 
+/* confirm dialog — same sheet treatment as #modalOverlay, for a styled
+   window.confirm() replacement */
+#confirmOverlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+}
+#confirmOverlay[hidden] { display: none; }
+#confirmDialog {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 22px; width: 380px; max-width: calc(100vw - 32px);
+  box-shadow: var(--shadow-pop);
+}
+#confirmDialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+#confirmMessage { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+#confirmActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+#confirmCancel {
+  background: var(--bg); border: 1px solid var(--border-strong); color: var(--text);
+  padding: 7px 14px; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer;
+}
+#confirmCancel:hover { background: var(--hover); }
+.danger-btn {
+  background: var(--red); color: #ffffff; border: none;
+  padding: 7px 15px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 590;
+  cursor: pointer; box-shadow: var(--shadow-sm);
+}
+.danger-btn:hover { filter: brightness(1.08); }
+.danger-btn:active { transform: scale(0.97); }
+
+/* toasts — non-blocking window.alert() replacement, stacked bottom-right */
+#toastContainer {
+  position: fixed; right: 20px; bottom: 20px; z-index: 200;
+  display: flex; flex-direction: column-reverse; gap: 8px;
+  max-width: min(340px, calc(100vw - 40px));
+}
+.toast {
+  background: var(--panel); border: 1px solid var(--border-strong); border-radius: 10px;
+  padding: 11px 14px; font-size: 13px; color: var(--text); box-shadow: var(--shadow-pop);
+  cursor: pointer; animation: toast-in 0.18s ease-out;
+}
+.toast-error { border-left: 3px solid var(--red); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
 /* habits */
 #habits {
   border: 1px solid var(--border);

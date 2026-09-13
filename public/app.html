@@ -352,6 +352,19 @@
     </div>
   </div>
 
+  <div id="confirmOverlay" hidden>
+    <div id="confirmDialog" role="alertdialog" aria-modal="true">
+      <h3 id="confirmTitle"></h3>
+      <p id="confirmMessage"></p>
+      <div id="confirmActions">
+        <button id="confirmCancel">Cancel</button>
+        <button id="confirmOk" class="primary-btn"></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" aria-live="polite"></div>
+
   <div id="slashMenu" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

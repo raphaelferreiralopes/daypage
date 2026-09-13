@@ -141,6 +141,14 @@ const modalError = document.getElementById('modalError');
 const modalSubmit = document.getElementById('modalSubmit');
 const modalCancel = document.getElementById('modalCancel');
 
+// confirm dialog
+const confirmOverlay = document.getElementById('confirmOverlay');
+const confirmTitle = document.getElementById('confirmTitle');
+const confirmMessage = document.getElementById('confirmMessage');
+const confirmOk = document.getElementById('confirmOk');
+const confirmCancel = document.getElementById('confirmCancel');
+const toastContainer = document.getElementById('toastContainer');
+
 let current = null; // currently open date
 let saveTimer = null;
 let editable = false; // is the current day editable?
@@ -789,7 +797,7 @@ async function toggleTimer() {
     if (current) openDay(current); // refresh entries + total
   } else {
     const projectId = timerProject.value;
-    if (!projectId) return alert('Create a project first to track time against it.');
+    if (!projectId) return showToast('Create a project first to track time against it.');
     const res = await apiFetch('/api/timer/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -800,7 +808,7 @@ async function toggleTimer() {
       runningTimer = body;
       if (view === 'journal') applyTimerUI();
     } else {
-      alert(body.error || 'Could not start timer');
+      showToast(body.error || 'Could not start timer');
     }
   }
 }
@@ -833,11 +841,11 @@ async function newProject(presetParentId) {
   if (res.ok) {
     await loadProjects();
     timerProject.value = created.id;
-  } else alert(created.error || 'Could not create project');
+  } else showToast(created.error || 'Could not create project');
 }
 
 async function logTime() {
-  if (!trackableProjects().length) return alert('Create an active project first.');
+  if (!trackableProjects().length) return showToast('Create an active project first.');
   const v = await openModal({
     title: 'Log time',
     submitLabel: 'Add',
@@ -855,14 +863,14 @@ async function logTime() {
   });
   if (!v) return;
   const seconds = (Number(v.hours) || 0) * 3600 + (Number(v.minutes) || 0) * 60;
-  if (seconds <= 0) return alert('Enter a duration greater than zero.');
+  if (seconds <= 0) return showToast('Enter a duration greater than zero.');
   const res = await apiFetch(`/api/time/${current}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ projectId: v.projectId, seconds, note: (v.note || '').trim() }),
   });
   if (res.ok) openDay(current);
-  else alert((await res.json()).error || 'Could not log time');
+  else showToast((await res.json()).error || 'Could not log time');
 }
 
 async function deleteTimeEntry(date, id) {
@@ -1066,7 +1074,7 @@ async function setProjectParent(id, parentId) {
     loadTimeOverview();
   } else {
     const body = await res.json().catch(() => ({}));
-    alert(body.error || 'Could not change parent project');
+    showToast(body.error || 'Could not change parent project');
     loadTimeOverview(); // revert the select back to the actual state
   }
 }
@@ -1098,7 +1106,11 @@ async function renameProject(id, name) {
 }
 
 async function removeProject(id, name) {
-  if (!confirm(`Delete project "${name}"? Its logged time will no longer be attributed to it.`)) return;
+  const ok = await openConfirm({
+    title: 'Delete project',
+    message: `Delete project "${name}"? Its logged time will no longer be attributed to it.`,
+  });
+  if (!ok) return;
   const res = await apiFetch(`/api/projects/${id}`, { method: 'DELETE' });
   if (res.ok) {
     if (openProjectId === id) openProjectId = null;
@@ -1199,7 +1211,11 @@ async function addHabit() {
 }
 
 async function deleteHabit(id, name) {
-  if (!confirm(`Delete habit "${name}"? Past values stay on disk but won't be shown.`)) return;
+  const ok = await openConfirm({
+    title: 'Delete habit',
+    message: `Delete habit "${name}"? Past values stay on disk but won't be shown.`,
+  });
+  if (!ok) return;
   const res = await apiFetch(`/api/habits/${id}`, { method: 'DELETE' });
   if (res.ok) {
     if (openHabitId === id) openHabitId = null; // fall back to overview
@@ -1307,6 +1323,47 @@ function openModal({ title, fields, submitLabel = 'Save' }) {
     const first = modalFields.querySelector('input, select');
     if (first) first.focus();
   });
+}
+
+// Promise-based replacement for window.confirm(), styled like openModal()'s
+// sheet instead of the native (unstylable, blocking) browser dialog.
+function openConfirm({ title, message, confirmLabel = 'Delete', danger = true }) {
+  return new Promise((resolve) => {
+    confirmTitle.textContent = title;
+    confirmMessage.textContent = message;
+    confirmOk.textContent = confirmLabel;
+    confirmOk.classList.toggle('danger-btn', danger);
+    confirmOk.classList.toggle('primary-btn', !danger);
+
+    function close(result) {
+      confirmOverlay.hidden = true;
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') close(false);
+      else if (e.key === 'Enter') close(document.activeElement === confirmOk);
+    }
+
+    confirmOk.onclick = () => close(true);
+    confirmCancel.onclick = () => close(false);
+    confirmOverlay.onclick = (e) => { if (e.target === confirmOverlay) close(false); };
+    document.addEventListener('keydown', onKey);
+
+    confirmOverlay.hidden = false;
+    confirmCancel.focus(); // destructive action isn't the default — Enter/Space needs an explicit Tab first
+  });
+}
+
+// Lightweight non-blocking replacement for window.alert() — stacks in the
+// corner and self-dismisses instead of halting the UI for a click.
+function showToast(message, { type = 'error' } = {}) {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  toast.onclick = () => toast.remove();
+  toastContainer.appendChild(toast);
+  setTimeout(() => toast.remove(), 5000);
 }
 
 function scheduleSave() {
@@ -1795,7 +1852,7 @@ async function addChecklist() {
     body: JSON.stringify({ name: v.name.trim() }),
   });
   if (res.ok) loadChecklists();
-  else alert((await res.json()).error || 'Could not create checklist');
+  else showToast((await res.json()).error || 'Could not create checklist');
 }
 addChecklistBtn.onclick = addChecklist;
 
@@ -1809,7 +1866,11 @@ async function renameChecklist(id, name) {
 }
 
 async function removeChecklist(id, name) {
-  if (!confirm(`Delete checklist "${name}"? Its items will be removed too.`)) return;
+  const ok = await openConfirm({
+    title: 'Delete checklist',
+    message: `Delete checklist "${name}"? Its items will be removed too.`,
+  });
+  if (!ok) return;
   const res = await apiFetch(`/api/checklists/${id}`, { method: 'DELETE' });
   if (res.ok) loadChecklists();
 }
@@ -1821,7 +1882,7 @@ async function addChecklistItem(checklistId, text) {
     body: JSON.stringify({ text }),
   });
   if (res.ok) loadChecklists();
-  else alert((await res.json()).error || 'Could not add item');
+  else showToast((await res.json()).error || 'Could not add item');
 }
 
 async function renameChecklistItem(checklistId, itemId, text) {
@@ -1994,7 +2055,7 @@ async function addGoal() {
     apiFetch('/api/habits').then((r) => r.json()),
     apiFetch('/api/projects').then((r) => r.json()),
   ]);
-  if (!habits.length && !projects.length) return alert('Create a habit or project first, then set a goal for it.');
+  if (!habits.length && !projects.length) return showToast('Create a habit or project first, then set a goal for it.');
   const v = await openModal({
     title: 'New goal',
     submitLabel: 'Add goal',
@@ -2032,10 +2093,10 @@ async function addGoal() {
     ],
   });
   if (!v) return;
-  if (!(Number(v.target) > 0)) return alert('Target must be a positive number.');
+  if (!(Number(v.target) > 0)) return showToast('Target must be a positive number.');
   const isTime = v.source === 'time';
-  if (isTime && !projects.length) return alert('Create a project first, then set a time goal for it.');
-  if (!isTime && !habits.length) return alert('Create a habit first, then set a goal for it.');
+  if (isTime && !projects.length) return showToast('Create a project first, then set a time goal for it.');
+  if (!isTime && !habits.length) return showToast('Create a habit first, then set a goal for it.');
   const label = isTime
     ? (projects.find((p) => p.id === v.projectId) || {}).name || ''
     : (habits.find((h) => h.id === v.habitId) || {}).name || '';
@@ -2048,7 +2109,7 @@ async function addGoal() {
     body: JSON.stringify(body),
   });
   if (res.ok) loadCycles(currentCycle);
-  else alert((await res.json()).error || 'Could not add goal');
+  else showToast((await res.json()).error || 'Could not add goal');
 }
 
 async function editGoal(id, patch, cycleId) {
@@ -2061,7 +2122,8 @@ async function editGoal(id, patch, cycleId) {
 }
 
 async function deleteGoal_(id, name, cycleId) {
-  if (!confirm(`Delete goal "${name}"?`)) return;
+  const ok = await openConfirm({ title: 'Delete goal', message: `Delete goal "${name}"?` });
+  if (!ok) return;
   const res = await apiFetch(`/api/goals/${id}`, { method: 'DELETE' });
   if (res.ok) loadCycles(cycleId);
 }
@@ -2216,10 +2278,10 @@ async function addYearGoal() {
   if (v.source === 'manual') {
     body.label = v.label;
   } else {
-    if (!(Number(v.target) > 0)) return alert('Target must be a positive number.');
+    if (!(Number(v.target) > 0)) return showToast('Target must be a positive number.');
     const isTime = v.source === 'time';
-    if (isTime && !projects.length) return alert('Create a project first, then set a time goal for it.');
-    if (!isTime && !habits.length) return alert('Create a habit first, then set a goal for it.');
+    if (isTime && !projects.length) return showToast('Create a project first, then set a time goal for it.');
+    if (!isTime && !habits.length) return showToast('Create a habit first, then set a goal for it.');
     body.target = v.target;
     body.label = isTime ? (projects.find((p) => p.id === v.projectId) || {}).name || '' : (habits.find((h) => h.id === v.habitId) || {}).name || '';
     if (isTime) body.projectId = v.projectId;
@@ -2232,7 +2294,7 @@ async function addYearGoal() {
     body: JSON.stringify(body),
   });
   if (res.ok) openYearGoals();
-  else alert((await res.json()).error || 'Could not add goal');
+  else showToast((await res.json()).error || 'Could not add goal');
 }
 
 async function editYearGoal(id, patch) {
@@ -2245,7 +2307,8 @@ async function editYearGoal(id, patch) {
 }
 
 async function deleteYearGoal_(id, name) {
-  if (!confirm(`Delete goal "${name}"?`)) return;
+  const ok = await openConfirm({ title: 'Delete goal', message: `Delete goal "${name}"?` });
+  if (!ok) return;
   const res = await apiFetch(`/api/goals/${id}`, { method: 'DELETE' });
   if (res.ok) openYearGoals();
 }
@@ -2322,7 +2385,7 @@ async function addOkr() {
     body: JSON.stringify({ cycleId: currentCycle, title: v.title.trim() }),
   });
   if (res.ok) openCycle(currentCycle);
-  else alert((await res.json()).error || 'Could not add OKR');
+  else showToast((await res.json()).error || 'Could not add OKR');
 }
 
 async function editOkr(id, patch, cycleId) {
@@ -2335,7 +2398,11 @@ async function editOkr(id, patch, cycleId) {
 }
 
 async function deleteOkr(id, title, cycleId) {
-  if (!confirm(`Delete OKR "${title}"? Habits linked to it will be unlinked.`)) return;
+  const confirmed = await openConfirm({
+    title: 'Delete OKR',
+    message: `Delete OKR "${title}"? Habits linked to it will be unlinked.`,
+  });
+  if (!confirmed) return;
   const res = await apiFetch(`/api/okrs/${id}`, { method: 'DELETE' });
   if (res.ok) openCycle(cycleId);
 }
@@ -2392,11 +2459,15 @@ async function addCycle() {
   });
   const data = await res.json();
   if (res.ok) loadCycles(data.id);
-  else alert(data.error || 'Could not create cycle');
+  else showToast(data.error || 'Could not create cycle');
 }
 
 async function deleteCycle_(id, name) {
-  if (!confirm(`Delete cycle "${name}"? Its notes will be removed. Your daily entries stay untouched.`)) return;
+  const ok = await openConfirm({
+    title: 'Delete cycle',
+    message: `Delete cycle "${name}"? Its notes will be removed. Your daily entries stay untouched.`,
+  });
+  if (!ok) return;
   const res = await apiFetch(`/api/cycles/${id}`, { method: 'DELETE' });
   if (res.ok) {
     if (currentCycle === id) currentCycle = null;
