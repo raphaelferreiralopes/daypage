@@ -398,6 +398,7 @@ function ensureDayVisible(date) {
 }
 
 async function openDay(date) {
+  closeSidebarOnMobile();
   const entry = await apiFetch(`/api/entry/${date}`).then((r) => r.json());
   current = date;
   currentMode = 'day';
@@ -917,6 +918,7 @@ function showProjectsOverview() {
 }
 
 async function showProjectDetail(id) {
+  closeSidebarOnMobile();
   openProjectId = id;
   const project = projects.find((p) => p.id === id);
   if (!project) return showProjectsOverview();
@@ -1574,6 +1576,7 @@ async function flushWeekReflexionSave() {
 
 // --- view switching ---------------------------------------------------------
 async function switchView(next) {
+  closeSidebarOnMobile();
   view = next;
   journalView.hidden = next !== 'journal';
   habitsView.hidden = next !== 'habits';
@@ -1942,6 +1945,7 @@ async function loadCycles(selectId) {
 }
 
 async function openCycle(id) {
+  closeSidebarOnMobile();
   const c = await apiFetch(`/api/cycle/${id}`).then((r) => r.json());
   if (c.error) return;
   currentCycle = id;
@@ -2538,6 +2542,7 @@ function showHabitsOverview() {
 }
 
 async function showHabitDetail(id) {
+  closeSidebarOnMobile();
   openHabitId = id;
   const habit = habitsCache.find((h) => h.id === id);
   if (!habit) return showHabitsOverview();
@@ -2996,24 +3001,43 @@ function makeRichFill(ta) {
 [cycleEditor, habitNotes, projectNotes].forEach(makeRichFill);
 const refreshRich = (ta) => ta._richSync && ta._richSync();
 
-// sidebar collapse toggle
-(function() {
-  const sidebar = document.getElementById('sidebar');
-  const btn = document.getElementById('sidebarToggle');
-  const STORAGE_KEY = 'sidebar-collapsed';
-  function apply(collapsed) {
-    sidebar.classList.toggle('collapsed', collapsed);
-    document.body.classList.toggle('sidebar-collapsed', collapsed);
-    btn.textContent = collapsed ? '›' : '‹';
-    btn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
-  }
-  apply(localStorage.getItem(STORAGE_KEY) === '1');
-  btn.addEventListener('click', () => {
-    const next = !sidebar.classList.contains('collapsed');
-    localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
-    apply(next);
-  });
-})();
+// sidebar collapse toggle — on narrow viewports the sidebar becomes an
+// off-canvas drawer (see the max-width media query in style.css) instead of
+// just shrinking to width 0, with a backdrop to close it by tapping outside.
+const sidebarEl = document.getElementById('sidebar');
+const sidebarToggleBtn = document.getElementById('sidebarToggle');
+const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+const SIDEBAR_STORAGE_KEY = 'sidebar-collapsed';
+const mobileMql = window.matchMedia('(max-width: 760px)');
+const isMobileViewport = () => mobileMql.matches;
+
+function applySidebarCollapsed(collapsed) {
+  sidebarEl.classList.toggle('collapsed', collapsed);
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  sidebarBackdrop.hidden = collapsed || !isMobileViewport(); // desktop never shows a backdrop
+  sidebarToggleBtn.textContent = collapsed ? '›' : '‹';
+  sidebarToggleBtn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+}
+// The desktop collapse preference is persisted, but mobile always starts
+// closed — otherwise the drawer would reuse a desktop "expanded" preference
+// and cover the whole screen on the very first phone visit.
+applySidebarCollapsed(isMobileViewport() || localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1');
+sidebarToggleBtn.addEventListener('click', () => {
+  const next = !sidebarEl.classList.contains('collapsed');
+  if (!isMobileViewport()) localStorage.setItem(SIDEBAR_STORAGE_KEY, next ? '1' : '0');
+  applySidebarCollapsed(next);
+});
+sidebarBackdrop.addEventListener('click', () => applySidebarCollapsed(true));
+// Crossing the breakpoint (e.g. rotating a tablet) doesn't change whether the
+// drawer is open, but it does change whether a backdrop should show behind
+// it — re-apply the current state so that stays in sync.
+mobileMql.addEventListener('change', () => applySidebarCollapsed(sidebarEl.classList.contains('collapsed')));
+
+// Picking something from the sidebar (a view, a day, a cycle, ...) should
+// close the drawer on mobile so the picked content is actually visible.
+function closeSidebarOnMobile() {
+  if (isMobileViewport()) applySidebarCollapsed(true);
+}
 
 // boot: open today
 (async function init() {

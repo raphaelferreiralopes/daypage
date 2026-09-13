@@ -1077,3 +1077,62 @@ body.auth-locked #main { display: none; }
   font-size: 12.5px; cursor: pointer;
 }
 #logoutBtn:hover { background: var(--red-soft); border-color: var(--red-soft); color: var(--red); }
+
+/* ============================================================
+   Mobile layout. Below this the fixed 240px sidebar becomes an
+   off-canvas drawer (fixed, full height, slides via transform)
+   with a tap-to-close backdrop, instead of just shrinking to
+   width 0 — and content gets tighter paddings so header rows,
+   tab pills and cards don't overflow a phone-width screen.
+   ============================================================ */
+@media (max-width: 760px) {
+  #sidebar {
+    position: fixed; inset: 0 auto 0 0; z-index: 60;
+    width: min(280px, 82vw);
+    box-shadow: var(--shadow-pop);
+    transition: transform 0.22s ease;
+  }
+  /* The desktop rule shrinks a collapsed sidebar to width:0 and fades its
+     content out; here it keeps its full width and just slides off-screen,
+     so both of those need overriding back. */
+  #sidebar.collapsed { width: min(280px, 82vw); transform: translateX(-100%); }
+  #sidebar.collapsed #nav,
+  #sidebar.collapsed #sidebarBody { opacity: 1; pointer-events: auto; }
+
+  #sidebarBackdrop {
+    position: fixed; inset: 0; z-index: 55;
+    background: rgba(0, 0, 0, 0.35);
+  }
+  #sidebarBackdrop[hidden] { display: none; }
+
+  /* Anchored top-left instead of vertically centered, and tracking the
+     drawer's (viewport-relative) width instead of the desktop 240px. */
+  #sidebarToggle { top: 14px; left: min(280px, 82vw); transform: none; z-index: 65; }
+  body.sidebar-collapsed #sidebarToggle { left: 0; transform: none; }
+
+  #main { padding: 18px 16px 24px; }
+  #entryHeader, #checklistHeader { flex-wrap: wrap; row-gap: 8px; margin-bottom: 18px; }
+  #entryHeader h2, #checklistHeader h2, #entryDate { font-size: 19px; }
+
+  #dayTabs, #weekTabs, #cycleTabs, #lifeModeTabs { flex-wrap: wrap; width: 100%; }
+
+  /* name + type/status controls on habit & project overview rows: let them
+     wrap onto a second line instead of clipping or squeezing the name. */
+  .ov-top, .tp-top { flex-wrap: wrap; row-gap: 8px; }
+
+  #timerProject { min-width: 0; flex: 1 1 140px; }
+
+  /* Recap calendar: still 7 columns (it's a calendar), just denser. */
+  .life-grid { gap: 4px; }
+  .life-cell { min-height: 56px; padding: 5px; }
+  .life-day-num { font-size: 11px; }
+  .life-recap-text { font-size: 10.5px; -webkit-line-clamp: 2; }
+}
+
+@media (max-width: 420px) {
+  #main { padding: 14px 12px 20px; }
+  .life-cell { min-height: 46px; }
+  /* No room left for a text preview at this width — the day number plus
+     the has-recap background tint is still enough to tap into a day. */
+  .life-recap-text { display: none; }
+}
