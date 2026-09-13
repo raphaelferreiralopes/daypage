@@ -1739,7 +1739,11 @@ function buildChecklistItemRow(checklistId, item) {
   cb.onchange = () => toggleChecklistItem(item.id, cb.checked);
   control.appendChild(cb);
   row.appendChild(control);
-  row.insertAdjacentHTML('beforeend', `<span class="name">${esc(item.text)}</span>`);
+  const nameInp = document.createElement('input');
+  nameInp.className = 'name';
+  nameInp.value = item.text;
+  nameInp.onchange = () => renameChecklistItem(checklistId, item.id, nameInp.value);
+  row.appendChild(nameInp);
   const delItem = document.createElement('button');
   delItem.className = 'del';
   delItem.textContent = '✕';
@@ -1818,6 +1822,15 @@ async function addChecklistItem(checklistId, text) {
   });
   if (res.ok) loadChecklists();
   else alert((await res.json()).error || 'Could not add item');
+}
+
+async function renameChecklistItem(checklistId, itemId, text) {
+  const res = await apiFetch(`/api/checklists/${checklistId}/items/${itemId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  if (res.ok) loadChecklists();
 }
 
 async function removeChecklistItem(checklistId, itemId) {

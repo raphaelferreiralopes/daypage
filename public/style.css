@@ -796,6 +796,11 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 }
 .checklist-item .drag-handle svg { width: 14px; height: 14px; pointer-events: none; }
 .checklist-item:hover .drag-handle { opacity: 1; }
+.checklist-item input.name {
+  flex: 1; background: transparent; border: none; border-bottom: 1px solid transparent;
+  color: var(--text); font: inherit; padding: 2px 0; border-radius: 0;
+}
+.checklist-item input.name:hover { border-bottom-color: var(--border-strong); }
 .checklist-add-row { margin-top: 10px; }
 .checklist-add-row input {
   width: 100%; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 7px;
@@ -965,6 +970,7 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 .modal-field input:focus, .modal-field select:focus,
 #summaryInput:focus,
 .habit-row input[type="text"]:focus,
+.checklist-item input.name:focus,
 #cycleMeta input:focus,
 .goal-edit-target:focus,
 .ov-unit:focus,
