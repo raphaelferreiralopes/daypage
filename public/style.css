@@ -788,6 +788,14 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 #checklistList { display: flex; flex-direction: column; gap: 16px; }
 .checklist-progress { font-size: 12px; color: var(--muted); margin: -4px 0 10px; }
 .checklist-card .habit-row { padding: 5px 0; }
+.checklist-item.dragging { opacity: 0.4; }
+.checklist-item .drag-handle {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  width: 16px; height: 20px; color: var(--faint); opacity: 0; transition: opacity 0.15s;
+  cursor: grab;
+}
+.checklist-item .drag-handle svg { width: 14px; height: 14px; pointer-events: none; }
+.checklist-item:hover .drag-handle { opacity: 1; }
 .checklist-add-row { margin-top: 10px; }
 .checklist-add-row input {
   width: 100%; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 7px;

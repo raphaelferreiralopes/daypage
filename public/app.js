@@ -3,6 +3,7 @@
 const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7"/><path d="M6 7l1 13a1.5 1.5 0 0 0 1.5 1.4h7A1.5 1.5 0 0 0 17 20L18 7"/><path d="M10 11v6M14 11v6"/></svg>';
 const PLAY_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5v13a1 1 0 0 0 1.53.85l10.6-6.5a1 1 0 0 0 0-1.7L8.53 4.65A1 1 0 0 0 7 5.5z"/></svg>';
 const STOP_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+const GRIP_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg>';
 
 const dayList = document.getElementById('dayList');
 const editor = document.getElementById('editor');
@@ -1685,26 +1686,7 @@ function buildChecklistCard(cl) {
     card.insertAdjacentHTML('beforeend', `<div class="checklist-progress">${done} / ${cl.items.length} done today</div>`);
   }
 
-  for (const item of cl.items) {
-    const row = document.createElement('div');
-    row.className = 'habit-row';
-    const control = document.createElement('div');
-    control.className = 'control control-check';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = item.checked;
-    cb.onchange = () => toggleChecklistItem(item.id, cb.checked);
-    control.appendChild(cb);
-    row.appendChild(control);
-    row.insertAdjacentHTML('beforeend', `<span class="name">${esc(item.text)}</span>`);
-    const delItem = document.createElement('button');
-    delItem.className = 'del';
-    delItem.textContent = '✕';
-    delItem.title = 'Delete item';
-    delItem.onclick = () => removeChecklistItem(cl.id, item.id);
-    row.appendChild(delItem);
-    card.appendChild(row);
-  }
+  for (const item of cl.items) card.appendChild(buildChecklistItemRow(cl.id, item));
 
   const addRow = document.createElement('div');
   addRow.className = 'checklist-add-row';
@@ -1720,7 +1702,71 @@ function buildChecklistCard(cl) {
   addRow.appendChild(input);
   card.appendChild(addRow);
 
+  // Drag-and-drop reordering: each row is draggable (see buildChecklistItemRow);
+  // dragover on a row live-reorders the DOM so the dragged row visibly swaps
+  // in as you pass over other rows, and dragover on the card itself (only
+  // reached when not over a row, i.e. the gap below the last item) appends
+  // it as the last item. Order is only persisted once on dragend.
+  card.addEventListener('dragover', (e) => {
+    const dragging = card.querySelector('.checklist-item.dragging');
+    if (!dragging) return;
+    e.preventDefault();
+    if (e.target.closest('.checklist-item')) return; // row's own listener already handled it
+    card.insertBefore(dragging, addRow);
+  });
+
   return card;
+}
+
+function buildChecklistItemRow(checklistId, item) {
+  const row = document.createElement('div');
+  row.className = 'habit-row checklist-item';
+  row.dataset.itemId = item.id;
+
+  // Only the grip handle is draggable — not the whole row — so a click on
+  // the checkbox or delete button can never be mistaken for a drag.
+  const grip = document.createElement('span');
+  grip.className = 'drag-handle';
+  grip.draggable = true;
+  grip.innerHTML = GRIP_SVG;
+  row.appendChild(grip);
+
+  const control = document.createElement('div');
+  control.className = 'control control-check';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = item.checked;
+  cb.onchange = () => toggleChecklistItem(item.id, cb.checked);
+  control.appendChild(cb);
+  row.appendChild(control);
+  row.insertAdjacentHTML('beforeend', `<span class="name">${esc(item.text)}</span>`);
+  const delItem = document.createElement('button');
+  delItem.className = 'del';
+  delItem.textContent = '✕';
+  delItem.title = 'Delete item';
+  delItem.onclick = () => removeChecklistItem(checklistId, item.id);
+  row.appendChild(delItem);
+
+  grip.addEventListener('dragstart', (e) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', item.id); // Firefox requires data to be set for drag to start
+    row.classList.add('dragging');
+  });
+  grip.addEventListener('dragend', () => {
+    row.classList.remove('dragging');
+    const list = [...row.parentNode.querySelectorAll('.checklist-item')];
+    reorderChecklistItems(checklistId, list.map((r) => r.dataset.itemId));
+  });
+  row.addEventListener('dragover', (e) => {
+    const dragging = row.parentNode.querySelector('.checklist-item.dragging');
+    if (!dragging || dragging === row) return;
+    e.preventDefault();
+    const rect = row.getBoundingClientRect();
+    const before = e.clientY < rect.top + rect.height / 2;
+    row.parentNode.insertBefore(dragging, before ? row : row.nextSibling);
+  });
+
+  return row;
 }
 
 async function toggleChecklistItem(itemId, checked) {
@@ -1777,6 +1823,17 @@ async function addChecklistItem(checklistId, text) {
 async function removeChecklistItem(checklistId, itemId) {
   const res = await apiFetch(`/api/checklists/${checklistId}/items/${itemId}`, { method: 'DELETE' });
   if (res.ok) loadChecklists();
+}
+
+// The DOM is already in its new order (buildChecklistItemRow's dragover
+// handlers moved rows live) — this just persists it, so no reload/rebuild.
+async function reorderChecklistItems(checklistId, itemIds) {
+  const res = await apiFetch(`/api/checklists/${checklistId}/items/reorder`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ itemIds }),
+  });
+  if (!res.ok) loadChecklists(); // fell out of sync with the server — rebuild from truth
 }
 
 // --- cycles -----------------------------------------------------------------

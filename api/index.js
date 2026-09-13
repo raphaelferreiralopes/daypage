@@ -160,6 +160,8 @@ app.put('/api/checklists/:id', h(async (req, res) => res.json(await db.renameChe
 app.delete('/api/checklists/:id', h(async (req, res) => res.json(await db.deleteChecklist(req.supabase, req.userId, req.params.id))));
 
 app.post('/api/checklists/:id/items', h(async (req, res) => res.json(await db.addChecklistItem(req.supabase, req.userId, req.params.id, req.body.text))));
+// Registered before the :itemId route below so "reorder" isn't swallowed as an item id.
+app.put('/api/checklists/:id/items/reorder', h(async (req, res) => res.json(await db.reorderChecklistItems(req.supabase, req.userId, req.params.id, req.body.itemIds))));
 app.put('/api/checklists/:id/items/:itemId', h(async (req, res) => res.json(await db.renameChecklistItem(req.supabase, req.userId, req.params.id, req.params.itemId, req.body.text))));
 app.delete('/api/checklists/:id/items/:itemId', h(async (req, res) => res.json(await db.deleteChecklistItem(req.supabase, req.userId, req.params.id, req.params.itemId))));
 
