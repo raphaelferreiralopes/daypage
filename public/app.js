@@ -149,6 +149,11 @@ const confirmOk = document.getElementById('confirmOk');
 const confirmCancel = document.getElementById('confirmCancel');
 const toastContainer = document.getElementById('toastContainer');
 
+// command palette
+const paletteOverlay = document.getElementById('paletteOverlay');
+const paletteInput = document.getElementById('paletteInput');
+const paletteResults = document.getElementById('paletteResults');
+
 let current = null; // currently open date
 let saveTimer = null;
 let editable = false; // is the current day editable?
@@ -523,6 +528,7 @@ async function saveLearnings() {
     statusEl.textContent = 'Saved ✓';
   } catch (e) {
     statusEl.textContent = '⚠ ' + e.message;
+    showToast(e.message);
   }
 }
 
@@ -556,6 +562,7 @@ async function saveReflexion() {
     statusEl.textContent = 'Saved ✓';
   } catch (e) {
     statusEl.textContent = '⚠ ' + e.message;
+    showToast(e.message);
   }
 }
 
@@ -954,6 +961,7 @@ const STATUS_LABELS = { active: 'Active', onhold: 'On hold', archive: 'Archived'
 const STATUS_ORDER = ['active', 'onhold', 'archive'];
 
 async function loadTimeOverview() {
+  if (!projectOverview.children.length) showSkeleton(projectOverview);
   const data = await apiFetch('/api/time-overview').then((r) => r.json());
   timeGrand.textContent = data.grandTotal ? fmtDur(data.grandTotal) + ' total' : '';
   projectOverview.innerHTML = '';
@@ -1045,7 +1053,7 @@ function projectCard(p, max, currentCycle, opts = {}) {
   del.className = 'tp-del';
   del.innerHTML = TRASH_SVG;
   del.title = 'Delete project';
-  del.onclick = () => removeProject(p.id, p.name);
+  del.onclick = () => removeProject(p.id, p.name, card);
   top.appendChild(del);
   card.appendChild(top);
 
@@ -1107,19 +1115,21 @@ async function renameProject(id, name) {
   }
 }
 
-async function removeProject(id, name) {
+async function removeProject(id, name, row) {
   const ok = await openConfirm({
     title: 'Delete project',
     message: `Delete project "${name}"? Its logged time will no longer be attributed to it.`,
   });
   if (!ok) return;
-  const res = await apiFetch(`/api/projects/${id}`, { method: 'DELETE' });
-  if (res.ok) {
-    if (openProjectId === id) openProjectId = null;
-    await loadProjects();
-    renderProjectNav();
-    loadTimeOverview();
-  }
+  deleteWithUndo(row, `Project "${name}"`, async () => {
+    const res = await apiFetch(`/api/projects/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      if (openProjectId === id) openProjectId = null;
+      await loadProjects();
+      renderProjectNav();
+      loadTimeOverview();
+    }
+  });
 }
 
 // --- habits -----------------------------------------------------------------
@@ -1167,7 +1177,7 @@ function renderHabits(habits, values) {
       del.className = 'del';
       del.textContent = '✕';
       del.title = 'Delete habit';
-      del.onclick = () => deleteHabit(h.id, h.name);
+      del.onclick = () => deleteHabit(h.id, h.name, row);
       row.appendChild(del);
     }
     habitList.appendChild(row);
@@ -1182,6 +1192,7 @@ async function saveHabit(habitId, value) {
     body: JSON.stringify({ habitId, value }),
   });
   statusEl.textContent = res.ok ? 'Saved ✓' : '⚠ Could not save habit';
+  if (!res.ok) showToast('Could not save habit');
 }
 
 async function addHabit() {
@@ -1209,20 +1220,22 @@ async function addHabit() {
     body: JSON.stringify({ name: v.name.trim(), type: v.type, unit: v.unit }),
   });
   if (res.ok) refresh();
-  else statusEl.textContent = '⚠ Could not add habit';
+  else showToast('Could not add habit');
 }
 
-async function deleteHabit(id, name) {
+async function deleteHabit(id, name, row) {
   const ok = await openConfirm({
     title: 'Delete habit',
     message: `Delete habit "${name}"? Past values stay on disk but won't be shown.`,
   });
   if (!ok) return;
-  const res = await apiFetch(`/api/habits/${id}`, { method: 'DELETE' });
-  if (res.ok) {
-    if (openHabitId === id) openHabitId = null; // fall back to overview
-    refresh();
-  }
+  deleteWithUndo(row, `Habit "${name}"`, async () => {
+    const res = await apiFetch(`/api/habits/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      if (openHabitId === id) openHabitId = null; // fall back to overview
+      refresh();
+    }
+  });
 }
 
 // re-render whichever view is currently active
@@ -1368,6 +1381,56 @@ function showToast(message, { type = 'error' } = {}) {
   setTimeout(() => toast.remove(), 5000);
 }
 
+const UNDO_DELETE_MS = 6000;
+
+// Delays a destructive action's actual API call until this window passes,
+// showing a dismissible "<label> deleted — Undo" toast in the meantime.
+// The row is only marked pending (dimmed, controls disabled), never removed
+// outright, since nothing is actually deleted server-side until `commit`
+// fires — clicking Undo just cancels that timer and restores the row.
+// Known limitation: if something else rebuilds this row's list from the
+// server before the window passes (e.g. adding a sibling item), the pending
+// row reverts to normal since the rebuild doesn't know about it, but the
+// timer still fires — an accepted edge case for a lightweight client-only
+// undo with no server-side soft-delete.
+function deleteWithUndo(row, label, commit) {
+  row.classList.add('pending-delete');
+  const controls = [...row.querySelectorAll('input, button, select, textarea')];
+  const wasDisabled = controls.map((el) => el.disabled);
+  controls.forEach((el) => (el.disabled = true));
+
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-undo';
+  const text = document.createElement('span');
+  text.textContent = `${label} deleted`;
+  toast.appendChild(text);
+  const undoBtn = document.createElement('button');
+  undoBtn.type = 'button';
+  undoBtn.className = 'toast-undo-btn';
+  undoBtn.textContent = 'Undo';
+  toast.appendChild(undoBtn);
+  toastContainer.appendChild(toast);
+
+  const timer = setTimeout(() => {
+    toast.remove();
+    commit();
+  }, UNDO_DELETE_MS);
+
+  undoBtn.onclick = () => {
+    clearTimeout(timer);
+    toast.remove();
+    row.classList.remove('pending-delete');
+    controls.forEach((el, i) => (el.disabled = wasDisabled[i]));
+  };
+}
+
+// Shimmering placeholder for a view's first async load — callers only show
+// it when the container is still empty, so a refresh after an edit (rename,
+// delete, ...) finds real content already in place and never flickers.
+function showSkeleton(container, rows = 4) {
+  container.innerHTML = Array.from({ length: rows }, () => '<div class="skeleton-row"></div>').join('');
+}
+
 function scheduleSave() {
   statusEl.textContent = 'Editing…';
   clearTimeout(saveTimer);
@@ -1388,6 +1451,7 @@ async function save() {
     loadDays();
   } catch (e) {
     statusEl.textContent = '⚠ ' + e.message;
+    showToast(e.message);
   }
 }
 
@@ -1540,6 +1604,7 @@ async function flushWeekSave() {
     loadDays(); // refresh dots
   } else {
     statusEl.textContent = '⚠ Could not save';
+    showToast('Could not save');
   }
 }
 
@@ -1572,6 +1637,7 @@ async function flushWeekReflexionSave() {
     body: JSON.stringify({ content: weekReflexionEditor.value }),
   });
   statusEl.textContent = res.ok ? 'Saved ✓' : '⚠ Could not save';
+  if (!res.ok) showToast('Could not save');
 }
 
 // --- view switching ---------------------------------------------------------
@@ -1615,7 +1681,10 @@ function shiftMonth(ym, delta) {
 }
 
 async function openLife() {
-  if (!recapsCache) await loadRecaps();
+  if (!recapsCache) {
+    showSkeleton(lifeCalendar, 5);
+    await loadRecaps();
+  }
   if (!lifeMonth) lifeMonth = todayISO().slice(0, 7);
   if (!lifeYear) lifeYear = todayISO().slice(0, 4);
   renderLife();
@@ -1737,7 +1806,7 @@ function buildChecklistCard(cl) {
   del.className = 'ov-del';
   del.innerHTML = TRASH_SVG;
   del.title = 'Delete checklist';
-  del.onclick = () => removeChecklist(cl.id, cl.name);
+  del.onclick = () => removeChecklist(cl.id, cl.name, card);
   top.appendChild(del);
   card.appendChild(top);
 
@@ -1808,7 +1877,7 @@ function buildChecklistItemRow(checklistId, item) {
   delItem.className = 'del';
   delItem.textContent = '✕';
   delItem.title = 'Delete item';
-  delItem.onclick = () => removeChecklistItem(checklistId, item.id);
+  delItem.onclick = () => removeChecklistItem(checklistId, item.id, item.text, row);
   row.appendChild(delItem);
 
   grip.addEventListener('dragstart', (e) => {
@@ -1868,14 +1937,16 @@ async function renameChecklist(id, name) {
   if (res.ok) loadChecklists();
 }
 
-async function removeChecklist(id, name) {
+async function removeChecklist(id, name, card) {
   const ok = await openConfirm({
     title: 'Delete checklist',
     message: `Delete checklist "${name}"? Its items will be removed too.`,
   });
   if (!ok) return;
-  const res = await apiFetch(`/api/checklists/${id}`, { method: 'DELETE' });
-  if (res.ok) loadChecklists();
+  deleteWithUndo(card, `Checklist "${name}"`, async () => {
+    const res = await apiFetch(`/api/checklists/${id}`, { method: 'DELETE' });
+    if (res.ok) loadChecklists();
+  });
 }
 
 async function addChecklistItem(checklistId, text) {
@@ -1897,9 +1968,11 @@ async function renameChecklistItem(checklistId, itemId, text) {
   if (res.ok) loadChecklists();
 }
 
-async function removeChecklistItem(checklistId, itemId) {
-  const res = await apiFetch(`/api/checklists/${checklistId}/items/${itemId}`, { method: 'DELETE' });
-  if (res.ok) loadChecklists();
+async function removeChecklistItem(checklistId, itemId, text, row) {
+  deleteWithUndo(row, `"${text}"`, async () => {
+    const res = await apiFetch(`/api/checklists/${checklistId}/items/${itemId}`, { method: 'DELETE' });
+    if (res.ok) loadChecklists();
+  });
 }
 
 // The DOM is already in its new order (buildChecklistItemRow's dragover
@@ -1915,6 +1988,7 @@ async function reorderChecklistItems(checklistId, itemIds) {
 
 // --- cycles -----------------------------------------------------------------
 async function loadCycles(selectId) {
+  if (!cycleList.children.length) showSkeleton(cycleList, 3);
   const cycles = await apiFetch('/api/cycles').then((r) => r.json());
   cycleList.innerHTML = '';
   if (!cycles.length) {
@@ -2041,7 +2115,7 @@ function renderGoals(c) {
       del.className = 'goal-del';
       del.innerHTML = TRASH_SVG;
       del.title = 'Delete goal';
-      del.onclick = () => deleteGoal_(g.id, g.label || g.habitName, c.id);
+      del.onclick = () => deleteGoal_(g.id, g.label || g.habitName, c.id, item);
       top.appendChild(del);
     }
     item.appendChild(top);
@@ -2125,11 +2199,13 @@ async function editGoal(id, patch, cycleId) {
   if (res.ok) loadCycles(cycleId);
 }
 
-async function deleteGoal_(id, name, cycleId) {
+async function deleteGoal_(id, name, cycleId, row) {
   const ok = await openConfirm({ title: 'Delete goal', message: `Delete goal "${name}"?` });
   if (!ok) return;
-  const res = await apiFetch(`/api/goals/${id}`, { method: 'DELETE' });
-  if (res.ok) loadCycles(cycleId);
+  deleteWithUndo(row, `Goal "${name}"`, async () => {
+    const res = await apiFetch(`/api/goals/${id}`, { method: 'DELETE' });
+    if (res.ok) loadCycles(cycleId);
+  });
 }
 
 // --- yearly goals -----------------------------------------------------------
@@ -2187,7 +2263,7 @@ function renderYearGoalList(y) {
       del.className = 'goal-del';
       del.innerHTML = TRASH_SVG;
       del.title = 'Delete goal';
-      del.onclick = () => deleteYearGoal_(g.id, g.label);
+      del.onclick = () => deleteYearGoal_(g.id, g.label, item);
       top.appendChild(del);
 
       item.appendChild(top);
@@ -2216,7 +2292,7 @@ function renderYearGoalList(y) {
     del.className = 'goal-del';
     del.innerHTML = TRASH_SVG;
     del.title = 'Delete goal';
-    del.onclick = () => deleteYearGoal_(g.id, g.label || g.habitName);
+    del.onclick = () => deleteYearGoal_(g.id, g.label || g.habitName, item);
     top.appendChild(del);
 
     item.appendChild(top);
@@ -2310,11 +2386,13 @@ async function editYearGoal(id, patch) {
   if (res.ok) openYearGoals();
 }
 
-async function deleteYearGoal_(id, name) {
+async function deleteYearGoal_(id, name, row) {
   const ok = await openConfirm({ title: 'Delete goal', message: `Delete goal "${name}"?` });
   if (!ok) return;
-  const res = await apiFetch(`/api/goals/${id}`, { method: 'DELETE' });
-  if (res.ok) openYearGoals();
+  deleteWithUndo(row, `Goal "${name}"`, async () => {
+    const res = await apiFetch(`/api/goals/${id}`, { method: 'DELETE' });
+    if (res.ok) openYearGoals();
+  });
 }
 
 goalsPrev.onclick = () => {
@@ -2356,7 +2434,7 @@ function renderOkrs(c) {
       del.className = 'okr-del';
       del.innerHTML = TRASH_SVG;
       del.title = 'Delete OKR';
-      del.onclick = () => deleteOkr(o.id, o.title, c.id);
+      del.onclick = () => deleteOkr(o.id, o.title, c.id, item);
       row.appendChild(del);
     }
     item.appendChild(row);
@@ -2401,14 +2479,16 @@ async function editOkr(id, patch, cycleId) {
   if (res.ok) openCycle(cycleId);
 }
 
-async function deleteOkr(id, title, cycleId) {
+async function deleteOkr(id, title, cycleId, row) {
   const confirmed = await openConfirm({
     title: 'Delete OKR',
     message: `Delete OKR "${title}"? Habits linked to it will be unlinked.`,
   });
   if (!confirmed) return;
-  const res = await apiFetch(`/api/okrs/${id}`, { method: 'DELETE' });
-  if (res.ok) openCycle(cycleId);
+  deleteWithUndo(row, `OKR "${title}"`, async () => {
+    const res = await apiFetch(`/api/okrs/${id}`, { method: 'DELETE' });
+    if (res.ok) openCycle(cycleId);
+  });
 }
 
 function renderCycleMeta(c) {
@@ -2442,7 +2522,11 @@ async function editCycle(id, patch) {
     body: JSON.stringify(patch),
   });
   if (res.ok) loadCycles(id);
-  else cycleStatus.textContent = '⚠ ' + ((await res.json()).error || 'Update failed');
+  else {
+    const error = (await res.json()).error || 'Update failed';
+    cycleStatus.textContent = '⚠ ' + error;
+    showToast(error);
+  }
 }
 
 async function addCycle() {
@@ -2472,11 +2556,13 @@ async function deleteCycle_(id, name) {
     message: `Delete cycle "${name}"? Its notes will be removed. Your daily entries stay untouched.`,
   });
   if (!ok) return;
-  const res = await apiFetch(`/api/cycles/${id}`, { method: 'DELETE' });
-  if (res.ok) {
-    if (currentCycle === id) currentCycle = null;
-    loadCycles();
-  }
+  deleteWithUndo(cycleMeta, `Cycle "${name}"`, async () => {
+    const res = await apiFetch(`/api/cycles/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      if (currentCycle === id) currentCycle = null;
+      loadCycles();
+    }
+  });
 }
 
 function scheduleCycleSave() {
@@ -2493,6 +2579,7 @@ async function saveCycleNotes() {
     body: JSON.stringify({ content: cycleEditor.value }),
   });
   cycleStatus.textContent = res.ok ? 'Saved ✓' : '⚠ Could not save';
+  if (!res.ok) showToast('Could not save');
 }
 
 addCycleBtn.onclick = addCycle;
@@ -2639,7 +2726,7 @@ async function loadOverview() {
     del.className = 'ov-del';
     del.innerHTML = TRASH_SVG;
     del.title = 'Delete habit';
-    del.onclick = () => deleteHabit(h.id, h.name);
+    del.onclick = () => deleteHabit(h.id, h.name, card);
     top.appendChild(del);
 
     card.appendChild(top);
@@ -2715,7 +2802,9 @@ async function saveHabitOrder(ids) {
   });
   if (!res.ok) {
     const json = await res.json().catch(() => null);
-    statusEl.textContent = '⚠ Could not save habit order' + (json && json.error ? `: ${json.error}` : '');
+    const suffix = json && json.error ? `: ${json.error}` : '';
+    statusEl.textContent = '⚠ Could not save habit order' + suffix;
+    showToast('Could not save habit order' + suffix);
     return false;
   }
   return true;
@@ -2756,6 +2845,7 @@ async function saveSummary() {
     body: JSON.stringify({ text: summaryInput.value }),
   });
   statusEl.textContent = res.ok ? 'Saved ✓' : '⚠ Could not save';
+  if (!res.ok) showToast('Could not save');
 }
 summaryInput.addEventListener('input', scheduleSummarySave);
 summaryInput.addEventListener('blur', () => { clearTimeout(summaryTimer); saveSummary(); });
@@ -3000,6 +3090,128 @@ function makeRichFill(ta) {
 }
 [cycleEditor, habitNotes, projectNotes].forEach(makeRichFill);
 const refreshRich = (ta) => ta._richSync && ta._richSync();
+
+// theme switch — 'system' just removes the override and lets the
+// prefers-color-scheme media query (in style.css) decide, same as before
+// this existed at all.
+const THEME_STORAGE_KEY = 'theme';
+const themeOpts = document.querySelectorAll('.theme-opt');
+function applyTheme(choice) {
+  if (choice === 'light' || choice === 'dark') document.documentElement.dataset.theme = choice;
+  else delete document.documentElement.dataset.theme;
+  themeOpts.forEach((b) => b.classList.toggle('active', b.dataset.themeChoice === choice));
+}
+applyTheme(localStorage.getItem(THEME_STORAGE_KEY) || 'system');
+themeOpts.forEach((b) => {
+  b.onclick = () => {
+    const choice = b.dataset.themeChoice;
+    localStorage.setItem(THEME_STORAGE_KEY, choice);
+    applyTheme(choice);
+  };
+});
+
+// --- command palette (Cmd/Ctrl+K) -------------------------------------------
+// Static view-jump commands are always available instantly; project/habit/
+// cycle entries are appended once their (fast, cached-or-cheap) data loads,
+// so opening the palette never waits on a network round trip first.
+const PALETTE_STATIC_COMMANDS = [
+  { label: 'Go to Today', category: 'View', run: () => goToToday() },
+  { label: 'Go to Journal', category: 'View', run: () => switchView('journal') },
+  { label: 'Go to Cycles', category: 'View', run: () => switchView('cycles') },
+  { label: 'Go to Habits', category: 'View', run: () => switchView('habits') },
+  { label: 'Go to Time', category: 'View', run: () => switchView('time') },
+  { label: 'Go to Checklist', category: 'View', run: () => switchView('checklist') },
+  { label: 'Go to Goals', category: 'View', run: () => switchView('goals') },
+  { label: 'Go to Life', category: 'View', run: () => switchView('life') },
+];
+
+let paletteOpen = false;
+let paletteItems = [];
+let paletteFiltered = [];
+let paletteSel = 0;
+
+function closePalette() {
+  paletteOpen = false;
+  paletteOverlay.hidden = true;
+  paletteInput.value = '';
+}
+
+function filterPalette() {
+  const q = paletteInput.value.trim().toLowerCase();
+  paletteFiltered = q
+    ? paletteItems.filter((c) => c.label.toLowerCase().includes(q) || c.category.toLowerCase().includes(q))
+    : paletteItems;
+  paletteSel = 0;
+  renderPalette();
+}
+
+function renderPalette() {
+  if (!paletteFiltered.length) {
+    paletteResults.innerHTML = '<div class="palette-empty">No matches</div>';
+    return;
+  }
+  paletteResults.innerHTML = paletteFiltered
+    .map(
+      (c, i) =>
+        `<div class="palette-item${i === paletteSel ? ' sel' : ''}" data-i="${i}">` +
+        `<span class="palette-label">${esc(c.label)}</span><span class="palette-cat">${esc(c.category)}</span></div>`
+    )
+    .join('');
+  [...paletteResults.children].forEach((el) => {
+    el.onmousedown = (ev) => { ev.preventDefault(); runPaletteItem(+el.dataset.i); };
+  });
+}
+
+function runPaletteItem(i) {
+  const c = paletteFiltered[i];
+  if (!c) return;
+  closePalette();
+  c.run();
+}
+
+async function openPalette() {
+  paletteOpen = true;
+  paletteOverlay.hidden = false;
+  paletteInput.value = '';
+  paletteInput.focus();
+
+  // projects are already kept in a live-updated global cache; no fetch needed
+  paletteItems = [...PALETTE_STATIC_COMMANDS];
+  for (const { project: p } of orderedProjectRows(projects)) {
+    paletteItems.push({ label: p.name, category: 'Project', run: async () => { await switchView('time'); showProjectDetail(p.id); } });
+  }
+  filterPalette();
+
+  const [habits, cycles] = await Promise.all([
+    apiFetch('/api/habits').then((r) => r.json()).catch(() => []),
+    apiFetch('/api/cycles').then((r) => r.json()).catch(() => []),
+  ]);
+  if (!paletteOpen) return; // closed again before this resolved
+  for (const h of habits) {
+    paletteItems.push({ label: h.name, category: 'Habit', run: async () => { await switchView('habits'); showHabitDetail(h.id); } });
+  }
+  for (const c of cycles) {
+    paletteItems.push({ label: c.name, category: 'Cycle', run: async () => { await switchView('cycles'); openCycle(c.id); } });
+  }
+  filterPalette();
+}
+
+paletteInput.addEventListener('input', filterPalette);
+paletteInput.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); paletteSel = Math.min(paletteSel + 1, paletteFiltered.length - 1); renderPalette(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); paletteSel = Math.max(paletteSel - 1, 0); renderPalette(); }
+  else if (e.key === 'Enter') { e.preventDefault(); runPaletteItem(paletteSel); }
+  else if (e.key === 'Escape') { e.preventDefault(); closePalette(); }
+});
+paletteOverlay.addEventListener('click', (e) => { if (e.target === paletteOverlay) closePalette(); });
+document.getElementById('paletteBtn').onclick = openPalette;
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    if (paletteOpen) closePalette();
+    else openPalette();
+  }
+});
 
 // sidebar collapse toggle — on narrow viewports the sidebar becomes an
 // off-canvas drawer (see the max-width media query in style.css) instead of
