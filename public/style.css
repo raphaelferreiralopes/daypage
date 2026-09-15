@@ -832,25 +832,39 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 #weekEditor:disabled { color: var(--muted); cursor: default; }
 #weekReadonlyNote, #cycleReadonlyNote { font-size: 12px; color: var(--muted); margin-top: 16px; display: flex; align-items: center; gap: 7px; }
 
-/* learnings — mirrors daily editor (auto-grow, backdrop layer) */
-#learningsWrap { position: relative; }
-#learningsBackdrop, #learningsEditor {
-  width: 100%; font: inherit;
-  font-size: 15px; line-height: 1.7; letter-spacing: -0.003em;
-  padding: 0; border: 0; white-space: pre-wrap; overflow-wrap: break-word;
+/* learnings — a list of separate "Learning N" boxes instead of one big note */
+#learningsHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+#learningsHeader h3 { margin: 0; font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); font-weight: 650; }
+#addLearningBtn {
+  background: var(--bg); border: 1px solid var(--border-strong); color: var(--muted);
+  padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer;
 }
-#learningsBackdrop {
-  position: absolute; inset: 0; pointer-events: none;
-  color: var(--text); overflow: hidden;
+#addLearningBtn:hover { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent); }
+#learningsList { display: flex; flex-direction: column; gap: 12px; }
+.learning-item {
+  position: relative;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 40px 12px 16px;
+  background: var(--panel); box-shadow: var(--shadow-sm);
 }
-#learningsEditor {
-  position: relative; z-index: 1; display: block;
-  min-height: 280px; resize: none;
-  overflow: hidden; background: transparent; outline: none;
-  color: transparent; caret-color: var(--text);
+.learning-label { font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); font-weight: 650; margin-bottom: 6px; }
+.learning-input {
+  display: block; width: 100%; resize: none; overflow: hidden;
+  background: transparent; border: 0; outline: none; padding: 0;
+  color: var(--text); font: inherit; font-size: 15px; line-height: 1.6; letter-spacing: -0.003em;
 }
-#learningsEditor::placeholder { color: var(--faint); }
-#learningsEditor:disabled { color: var(--muted); cursor: default; }
+.learning-input::placeholder { color: var(--faint); }
+.learning-input:disabled { color: var(--muted); cursor: default; }
+.learning-del {
+  position: absolute; top: 10px; right: 10px;
+  background: none; border: none; color: var(--faint); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 6px;
+  opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.learning-del svg { width: 14px; height: 14px; }
+.learning-item:hover .learning-del { opacity: 1; }
+.learning-del:hover { color: var(--red); background: var(--red-soft); }
 #learningsReadonlyNote { font-size: 12px; color: var(--muted); margin-top: 12px; display: flex; align-items: center; gap: 7px; }
 
 /* reflexion (day + week) — mirrors daily editor (auto-grow, backdrop layer) */
@@ -1050,11 +1064,11 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 .cbk.on { color: var(--accent); }
 .cbtxt.done { color: var(--faint); text-decoration: line-through; }
 /* inline bold/italic/strikethrough rendering on the backdrop */
-#editorBackdrop strong, #weekEditorBackdrop strong, #learningsBackdrop strong,
+#editorBackdrop strong, #weekEditorBackdrop strong,
 #reflexionBackdrop strong, #weekReflexionBackdrop strong, .rich-backdrop strong { font-weight: 700; }
-#editorBackdrop em, #weekEditorBackdrop em, #learningsBackdrop em,
+#editorBackdrop em, #weekEditorBackdrop em,
 #reflexionBackdrop em, #weekReflexionBackdrop em, .rich-backdrop em { font-style: italic; }
-#editorBackdrop del, #weekEditorBackdrop del, #learningsBackdrop del,
+#editorBackdrop del, #weekEditorBackdrop del,
 #reflexionBackdrop del, #weekReflexionBackdrop del, .rich-backdrop del { text-decoration: line-through; color: var(--muted); }
 .md-mark { color: var(--faint); }
 /* Markdown markers (**, *, ~~) are only shown on the line the caret is
@@ -1066,7 +1080,7 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 /* The textarea's own text is transparent (the backdrop renders it instead,
    see above) — without this, a selection just paints an empty highlight
    box with no visible characters in it. */
-#editor::selection, #weekEditor::selection, #learningsEditor::selection,
+#editor::selection, #weekEditor::selection,
 #reflexionEditor::selection, #weekReflexionEditor::selection,
 .rich-wrap textarea::selection {
   color: var(--text);

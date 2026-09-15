@@ -91,9 +91,10 @@ const dayPages = {
   learnings: document.getElementById('dayPageLearnings'),
   sentence: document.getElementById('dayPageSentence'),
 };
-const learningsEditor = document.getElementById('learningsEditor');
-const learningsBackdrop = document.getElementById('learningsBackdrop');
+const learningsList = document.getElementById('learningsList');
+const addLearningBtn = document.getElementById('addLearningBtn');
 const learningsReadonlyNote = document.getElementById('learningsReadonlyNote');
+let learningsItems = [''];
 const reflexionEditor = document.getElementById('reflexionEditor');
 const reflexionBackdrop = document.getElementById('reflexionBackdrop');
 const reflexionReadonlyNote = document.getElementById('reflexionReadonlyNote');
@@ -431,11 +432,10 @@ async function openDay(date) {
   summaryInput.disabled = !entry.editable;
   renderEditorBackdrop();
   autoGrowEditor();
-  learningsEditor.value = entry.learnings || '';
-  learningsEditor.disabled = !entry.editable;
+  learningsItems = parseLearnings(entry.learnings);
+  addLearningBtn.hidden = !entry.editable;
   learningsReadonlyNote.hidden = entry.editable;
-  renderLearningsBackdrop();
-  autoGrowLearningsEditor();
+  renderLearningsList();
   reflexionEditor.value = entry.reflexion || '';
   reflexionEditor.disabled = !entry.editable;
   reflexionReadonlyNote.hidden = entry.editable;
@@ -455,11 +455,11 @@ function switchDayPage(page) {
   // is what left the bottom of a long entry clipped until the next keypress.
   if (page === 'notes') autoGrowEditor();
   if (page === 'reflexion') autoGrowReflexionEditor();
-  if (page === 'learnings') autoGrowLearningsEditor();
+  if (page === 'learnings') regrowLearningsBoxes();
   if (page === 'notes' && editable) editor.focus();
   if (page === 'reflexion' && editable) reflexionEditor.focus();
   if (page === 'sentence' && editable) summaryInput.focus();
-  if (page === 'learnings' && editable) learningsEditor.focus();
+  if (page === 'learnings' && editable) learningsList.querySelector('.learning-input')?.focus();
 }
 dayTabs.forEach((t) => (t.onclick = () => switchDayPage(t.dataset.page)));
 
@@ -538,22 +538,88 @@ weekEditor.addEventListener('keyup', renderWeekBackdrop);
 weekEditor.addEventListener('focus', renderWeekBackdrop);
 weekEditor.addEventListener('blur', renderWeekBackdrop);
 
-function renderLearningsBackdrop() {
-  learningsBackdrop.innerHTML = highlightNotes(learningsEditor.value, caretLineOf(learningsEditor));
+// Learnings are stored server-side as a single text field (day_learnings.content,
+// no schema change needed), but edited here as separate "Learning N" boxes — so
+// that field holds a JSON array of strings. Older entries (from before this was
+// a list) hold a plain string instead; parseLearnings treats that whole string
+// as a single first item so nothing existing gets lost.
+function parseLearnings(raw) {
+  if (!raw) return [''];
+  try {
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) return arr.length ? arr.map(String) : [''];
+  } catch {
+    // not JSON — pre-existing freeform text from before this was a list
+  }
+  return [raw];
 }
-function autoGrowLearningsEditor() {
-  learningsEditor.style.height = 'auto';
-  learningsEditor.style.height = learningsEditor.scrollHeight + 'px';
-  keepCaretInView(learningsEditor);
+
+function autoGrowTextarea(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
 }
-learningsEditor.addEventListener('input', renderLearningsBackdrop);
-learningsEditor.addEventListener('input', autoGrowLearningsEditor);
-learningsEditor.addEventListener('input', scheduleLearningsSave);
-learningsEditor.addEventListener('click', renderLearningsBackdrop);
-learningsEditor.addEventListener('keyup', renderLearningsBackdrop);
-learningsEditor.addEventListener('focus', renderLearningsBackdrop);
-learningsEditor.addEventListener('blur', renderLearningsBackdrop);
-learningsEditor.addEventListener('blur', () => { clearTimeout(learningsSaveTimer); saveLearnings(); });
+// Re-measures every learning box's height — needed the same way autoGrowEditor
+// is re-run in switchDayPage: a box built while its page was display:none
+// measures 0 and stays too short until this runs again while actually visible.
+function regrowLearningsBoxes() {
+  learningsList.querySelectorAll('.learning-input').forEach(autoGrowTextarea);
+}
+
+function renderLearningsList() {
+  learningsList.innerHTML = '';
+  learningsItems.forEach((text, i) => learningsList.appendChild(buildLearningRow(text, i)));
+}
+
+function buildLearningRow(text, index) {
+  const row = document.createElement('div');
+  row.className = 'learning-item';
+
+  const label = document.createElement('div');
+  label.className = 'learning-label';
+  label.textContent = `Learning ${index + 1}`;
+  row.appendChild(label);
+
+  const ta = document.createElement('textarea');
+  ta.className = 'learning-input';
+  ta.rows = 1;
+  ta.placeholder = 'What did you learn?';
+  ta.value = text;
+  ta.disabled = !editable;
+  ta.addEventListener('input', () => {
+    learningsItems[index] = ta.value;
+    autoGrowTextarea(ta);
+    scheduleLearningsSave();
+  });
+  ta.addEventListener('blur', () => { clearTimeout(learningsSaveTimer); saveLearnings(); });
+  row.appendChild(ta);
+
+  if (editable) {
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'learning-del';
+    del.title = 'Remove this learning';
+    del.innerHTML = TRASH_SVG;
+    del.addEventListener('click', () => {
+      learningsItems.splice(index, 1);
+      if (!learningsItems.length) learningsItems.push('');
+      renderLearningsList();
+      regrowLearningsBoxes();
+      scheduleLearningsSave();
+    });
+    row.appendChild(del);
+  }
+
+  if (!dayPages.learnings.hidden) autoGrowTextarea(ta);
+  return row;
+}
+
+addLearningBtn.addEventListener('click', () => {
+  learningsItems.push('');
+  renderLearningsList();
+  regrowLearningsBoxes();
+  const boxes = learningsList.querySelectorAll('.learning-input');
+  boxes[boxes.length - 1]?.focus();
+});
 
 function scheduleLearningsSave() {
   statusEl.textContent = 'Editing…';
@@ -567,7 +633,7 @@ async function saveLearnings() {
     const res = await apiFetch(`/api/learnings/${current}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: learningsEditor.value }),
+      body: JSON.stringify({ content: JSON.stringify(learningsItems) }),
     });
     if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
     statusEl.textContent = 'Saved ✓';
@@ -1618,7 +1684,7 @@ function renderWeekHabits(note) {
 // read-only rollup: each day's learnings text, Monday → Sunday
 function renderWeekLearnings(note) {
   weekLearningsSummaryEl.innerHTML = '';
-  const withText = note.learnings.filter((l) => l.content && l.content.trim());
+  const withText = note.learnings.filter((l) => parseLearnings(l.content).some((t) => t.trim()));
   if (!withText.length) {
     weekLearningsSummaryEl.innerHTML = '<div class="habits-empty">No learnings logged this week.</div>';
     return;
@@ -1628,7 +1694,7 @@ function renderWeekLearnings(note) {
     const block = document.createElement('div');
     block.className = 'week-learning-block';
     block.innerHTML = `<h4>${esc(dd.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }))}</h4><div class="week-learning-text"></div>`;
-    block.querySelector('.week-learning-text').textContent = l.content;
+    block.querySelector('.week-learning-text').textContent = parseLearnings(l.content).filter((t) => t.trim()).join('\n');
     weekLearningsSummaryEl.appendChild(block);
   }
 }
@@ -3127,7 +3193,7 @@ function attachNotes(ta) {
   ta.addEventListener('blur', () => setTimeout(() => { if (slashTa === ta) closeSlash(); }, 150));
 }
 
-[editor, cycleEditor, habitNotes, projectNotes, weekEditor, learningsEditor, reflexionEditor, weekReflexionEditor].forEach(attachNotes);
+[editor, cycleEditor, habitNotes, projectNotes, weekEditor, reflexionEditor, weekReflexionEditor].forEach(attachNotes);
 
 // Give the cycle/habit/project note editors the same rendered backdrop as the
 // daily notes (checkboxes + **bold**), kept aligned + scroll-synced.
@@ -3189,7 +3255,7 @@ function addFormatToolbar(ta) {
   }
   wrap.appendChild(bar);
 }
-[editor, cycleEditor, habitNotes, projectNotes, weekEditor, learningsEditor, reflexionEditor, weekReflexionEditor].forEach(addFormatToolbar);
+[editor, cycleEditor, habitNotes, projectNotes, weekEditor, reflexionEditor, weekReflexionEditor].forEach(addFormatToolbar);
 
 // Auto-growing note editors (see autoGrowEditor & co.) have overflow:hidden —
 // the page scrolls instead of the box — which means the browser's built-in
