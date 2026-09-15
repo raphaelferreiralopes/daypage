@@ -2373,7 +2373,7 @@ function renderProgressList(c) {
     item.className = 'pp-item';
     item.innerHTML =
       `<div class="pp-top"><span class="pp-name">${esc(g.label || g.habitName)}</span>` +
-      `<span><span class="pp-count">${g.current}${unit} / ${g.target}${unit}</span><span class="pp-pct">${g.pct}%</span></span></div>` +
+      `<span><span class="pp-count">${g.current} / ${g.target}${unit}</span><span class="pp-pct">${g.pct}%</span></span></div>` +
       `<div class="bar big${g.pct >= 100 ? ' done' : ''}"><span style="width:${g.pct}%"></span></div>`;
     goalProgressList.appendChild(item);
   }
@@ -2401,11 +2401,10 @@ function renderGoals(c) {
     const item = document.createElement('div');
     item.className = 'goal-item';
 
-    const unit = g.unit ? ' ' + esc(g.unit) : '';
     const top = document.createElement('div');
     top.className = 'goal-top';
     top.insertAdjacentHTML('beforeend', `<span class="goal-name">${esc(g.label || g.habitName)}</span>`);
-    top.insertAdjacentHTML('beforeend', `<span class="goal-count">${g.current}${unit} / </span>`);
+    top.insertAdjacentHTML('beforeend', `<span class="goal-current">${g.current}</span><span class="goal-sep">/</span>`);
 
     const targetInp = document.createElement('input');
     targetInp.className = 'goal-edit-target';
@@ -2416,7 +2415,7 @@ function renderGoals(c) {
     targetInp.title = 'Target';
     targetInp.onchange = () => editGoal(g.id, { target: targetInp.value }, c.id);
     top.appendChild(targetInp);
-    if (unit) top.insertAdjacentHTML('beforeend', `<span class="goal-count">${unit}</span>`);
+    if (g.unit) top.insertAdjacentHTML('beforeend', `<span class="goal-unit">${esc(g.unit)}</span>`);
 
     if (c.editable) {
       const del = document.createElement('button');
@@ -2580,11 +2579,10 @@ function renderYearGoalList(y) {
       continue;
     }
 
-    const unit = g.unit ? ' ' + esc(g.unit) : '';
     const top = document.createElement('div');
     top.className = 'goal-top';
     top.insertAdjacentHTML('beforeend', `<span class="goal-name">${esc(g.label || g.habitName)}</span>`);
-    top.insertAdjacentHTML('beforeend', `<span class="goal-count">${g.current}${unit} / </span>`);
+    top.insertAdjacentHTML('beforeend', `<span class="goal-current">${g.current}</span><span class="goal-sep">/</span>`);
 
     const targetInp = document.createElement('input');
     targetInp.className = 'goal-edit-target';
@@ -2594,7 +2592,7 @@ function renderYearGoalList(y) {
     targetInp.title = 'Target';
     targetInp.onchange = () => editYearGoal(g.id, { target: targetInp.value });
     top.appendChild(targetInp);
-    if (unit) top.insertAdjacentHTML('beforeend', `<span class="goal-count">${unit}</span>`);
+    if (g.unit) top.insertAdjacentHTML('beforeend', `<span class="goal-unit">${esc(g.unit)}</span>`);
 
     const del = document.createElement('button');
     del.className = 'goal-del';
