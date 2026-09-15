@@ -256,9 +256,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M9 13h6M9 17h6"/></svg>
           Rules
         </button>
-        <button class="cycle-tab" data-page="okrs">
+        <button class="cycle-tab" data-page="goals">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
-          OKR &amp; Goals
+          Goals
         </button>
         <button class="cycle-tab" data-page="progress">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>
@@ -277,22 +277,14 @@
         <div id="cycleReadonlyNote" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> This cycle has ended and is read-only.</div>
       </div>
 
-      <!-- OKR & Goals page -->
-      <div id="cyclePageOkrs" class="cycle-page" hidden>
+      <!-- Goals page -->
+      <div id="cyclePageGoals" class="cycle-page" hidden>
         <section id="goals">
           <div id="goalsHeader">
             <h3>Goals</h3>
             <button id="addGoalBtn" title="Add a goal for this cycle">+ Add goal</button>
           </div>
           <div id="goalList"></div>
-        </section>
-
-        <section id="okrs">
-          <div id="okrsHeader">
-            <h3>OKRs</h3>
-            <button id="addOkrBtn" title="Add an OKR to this cycle">+ Add OKR</button>
-          </div>
-          <div id="okrList"></div>
         </section>
       </div>
 

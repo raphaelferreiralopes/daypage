@@ -115,8 +115,6 @@ const priorityList = document.getElementById('priorityList');
 const addPriorityBtn = document.getElementById('addPriorityBtn');
 const cycleReadonlyNote = document.getElementById('cycleReadonlyNote');
 let cyclePriorities = [{ title: '', content: '' }];
-const okrList = document.getElementById('okrList');
-const addOkrBtn = document.getElementById('addOkrBtn');
 const cycleProgress = document.getElementById('cycleProgress');
 const cycleTimeProgress = document.getElementById('cycleTimeProgress');
 const goalList = document.getElementById('goalList');
@@ -125,7 +123,7 @@ const goalProgressList = document.getElementById('goalProgressList');
 const cycleTabs = document.querySelectorAll('.cycle-tab');
 const cyclePages = {
   rules: document.getElementById('cyclePageRules'),
-  okrs: document.getElementById('cyclePageOkrs'),
+  goals: document.getElementById('cyclePageGoals'),
   progress: document.getElementById('cyclePageProgress'),
 };
 
@@ -583,16 +581,48 @@ function autoGrowTextarea(ta) {
   ta.style.height = ta.scrollHeight + 'px';
 }
 
-// One labeled, deletable, auto-growing textarea — the shared shape behind
-// the Learnings boxes and the Cycle Priorities boxes. Returns the row
-// element; state (which array, which save call) stays with the caller.
-// The label is a plain positional caption ("Learning 2") by default; pass
-// titleValue (+ onTitleInput) to make it a renameable header instead (Cycle
-// Priorities) — `label` then becomes just its placeholder ("Priority 2"),
-// never stored text, so an unnamed box still shows a sensible default.
-function buildBoxRow({ label, titleValue, onTitleInput, text, placeholder, editable, onInput, onBlur, onDelete }) {
+// One labeled, deletable, auto-growing, drag-reorderable textarea — the
+// shared shape behind the Learnings boxes and the Cycle Priorities boxes.
+// Returns the row element; state (which array, which save call) stays with
+// the caller. The label is a plain positional caption ("Learning 2") by
+// default; pass titleValue (+ onTitleInput) to make it a renameable header
+// instead (Cycle Priorities) — `label` then becomes just its placeholder
+// ("Priority 2"), never stored text, so an unnamed box still shows a
+// sensible default.
+//
+// These items have no stable id (unlike habits/checklist items), so
+// reordering doesn't move an id around a list — instead, on drop, onReorder
+// re-reads every visible box's current title+content off the DOM in its new
+// order and hands that back as the new source of truth (see buildLearningRow
+// / buildPriorityRow), then the caller re-renders from it.
+function buildBoxRow({ label, titleValue, onTitleInput, text, placeholder, editable, onInput, onBlur, onDelete, onReorder }) {
   const row = document.createElement('div');
   row.className = 'item-box';
+
+  if (editable) {
+    const grip = document.createElement('span');
+    grip.className = 'drag-handle';
+    grip.draggable = true;
+    grip.innerHTML = GRIP_SVG;
+    row.appendChild(grip);
+    grip.addEventListener('dragstart', (e) => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', 'box'); // Firefox requires data to be set for drag to start
+      row.classList.add('dragging');
+    });
+    grip.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      onReorder();
+    });
+    row.addEventListener('dragover', (e) => {
+      const dragging = row.parentNode.querySelector('.item-box.dragging');
+      if (!dragging || dragging === row) return;
+      e.preventDefault();
+      const rect = row.getBoundingClientRect();
+      const before = e.clientY < rect.top + rect.height / 2;
+      row.parentNode.insertBefore(dragging, before ? row : row.nextSibling);
+    });
+  }
 
   if (titleValue !== undefined) {
     const titleInput = document.createElement('input');
@@ -664,8 +694,25 @@ function buildLearningRow(text, index) {
       regrowLearningsBoxes();
       scheduleLearningsSave();
     },
+    onReorder: () => {
+      learningsItems = [...learningsList.querySelectorAll('.item-box')].map((row) => row.querySelector('.item-box-input').value);
+      renderLearningsList();
+      regrowLearningsBoxes();
+      scheduleLearningsSave();
+    },
   });
 }
+
+// Dropping past the last box (i.e. not over any .item-box) appends it as the
+// last item. Bound once here, not inside renderLearningsList, since
+// learningsList is a persistent element re-populated on every render.
+learningsList.addEventListener('dragover', (e) => {
+  const dragging = learningsList.querySelector('.item-box.dragging');
+  if (!dragging) return;
+  e.preventDefault();
+  if (e.target.closest('.item-box')) return; // a box's own listener already handled it
+  learningsList.appendChild(dragging);
+});
 
 addLearningBtn.addEventListener('click', () => {
   learningsItems.push('');
@@ -1370,7 +1417,7 @@ function renderHabits(habits, values) {
     row.appendChild(control);
 
     // habit name on the RIGHT
-    row.insertAdjacentHTML('beforeend', `<span class="name">${esc(h.name)}${okrTag(h)}</span>`);
+    row.insertAdjacentHTML('beforeend', `<span class="name">${esc(h.name)}</span>`);
 
     if (editable) {
       const del = document.createElement('button');
@@ -1454,10 +1501,6 @@ async function deleteHabit(id, name, row) {
 function refresh() {
   if (view === 'habits') loadHabitsTab();
   else openDay(current);
-}
-
-function okrTag(h) {
-  return h.okr ? ` <span class="okr-tag" title="${esc(h.okr.cycleName || '')}">${esc(h.okr.title)}</span>` : '';
 }
 
 function esc(s) {
@@ -2256,7 +2299,7 @@ async function loadCycles(selectId) {
   const cycles = await apiFetch('/api/cycles').then((r) => r.json());
   cycleList.innerHTML = '';
   if (!cycles.length) {
-    cycleList.innerHTML = '<li style="cursor:default;color:var(--muted)">No cycles yet. A cycle bundles a few weeks around its own rules and OKRs — click “+ New cycle” to start one.</li>';
+    cycleList.innerHTML = '<li style="cursor:default;color:var(--muted)">No cycles yet. A cycle bundles a few weeks around its own priorities and goals — click “+ New cycle” to start one.</li>';
     cycleName.textContent = '—';
     cycleBadge.textContent = '';
     cycleStatus.textContent = '';
@@ -2301,12 +2344,11 @@ async function openCycle(id) {
   renderProgress(c);
   renderProgressList(c);
   renderGoals(c);
-  renderOkrs(c);
   switchCyclePage(cyclePage);
   [...cycleList.children].forEach((li) => li.classList.toggle('active', li.dataset.id === id));
 }
 
-// switch between Rules / OKR & Goals / Progress within a cycle
+// switch between Rules / Goals / Progress within a cycle
 function switchCyclePage(page) {
   cyclePage = page;
   for (const key of Object.keys(cyclePages)) cyclePages[key].hidden = key !== page;
@@ -2322,7 +2364,7 @@ cycleTabs.forEach((t) => (t.onclick = () => switchCyclePage(t.dataset.page)));
 function renderProgressList(c) {
   goalProgressList.innerHTML = '';
   if (!c.goals.length) {
-    goalProgressList.innerHTML = '<div class="pp-empty">No goals yet — add some on the “OKR &amp; Goals” page.</div>';
+    goalProgressList.innerHTML = '<div class="pp-empty">No goals yet — add some on the “Goals” page.</div>';
     return;
   }
   for (const g of c.goals) {
@@ -2352,7 +2394,7 @@ function renderGoals(c) {
   addGoalBtn.hidden = !c.editable;
   goalList.innerHTML = '';
   if (!c.goals.length) {
-    goalList.innerHTML = '<div class="okr-habits"><span class="none">No goals yet. Unlike the OKRs below, a goal tracks one number against a target — add one like “Workout → 25”.</span></div>';
+    goalList.innerHTML = '<div class="mini-empty"><span class="none">No goals yet. A goal tracks one number against a target — add one like “Workout → 25”.</span></div>';
     return;
   }
   for (const g of c.goals) {
@@ -2505,7 +2547,7 @@ function renderYearOverallProgress(y) {
 function renderYearGoalList(y) {
   yearGoalList.innerHTML = '';
   if (!y.goals.length) {
-    yearGoalList.innerHTML = '<div class="okr-habits"><span class="none">No goals yet for this year. These are separate from your cycle OKRs — add a longer-term one below.</span></div>';
+    yearGoalList.innerHTML = '<div class="mini-empty"><span class="none">No goals yet for this year. These are separate from a cycle’s own goals — add a longer-term one below.</span></div>';
     return;
   }
   for (const g of y.goals) {
@@ -2675,88 +2717,6 @@ goalsTodayBtn.onclick = () => {
 };
 addYearGoalBtn.onclick = addYearGoal;
 
-// --- OKRs (on the cycle page) ----------------------------------------------
-function renderOkrs(c) {
-  addOkrBtn.hidden = !c.editable;
-  okrList.innerHTML = '';
-  if (!c.okrs.length) {
-    okrList.innerHTML = '<div class="okr-habits"><span class="none">No OKRs yet for this cycle. An OKR is an Objective with a few Key Results — add one to track it here.</span></div>';
-    return;
-  }
-  for (const o of c.okrs) {
-    const item = document.createElement('div');
-    item.className = 'okr-item';
-
-    const row = document.createElement('div');
-    row.className = 'okr-row';
-    const title = document.createElement('input');
-    title.className = 'okr-title';
-    title.value = o.title;
-    title.disabled = !c.editable;
-    title.onchange = () => editOkr(o.id, { title: title.value }, c.id);
-    row.appendChild(title);
-    if (c.editable) {
-      const del = document.createElement('button');
-      del.className = 'okr-del';
-      del.innerHTML = TRASH_SVG;
-      del.title = 'Delete OKR';
-      del.onclick = () => deleteOkr(o.id, o.title, c.id, item);
-      row.appendChild(del);
-    }
-    item.appendChild(row);
-
-    const habits = document.createElement('div');
-    habits.className = 'okr-habits';
-    if (o.habits.length) {
-      habits.innerHTML = o.habits.map((h) => `<span class="pill">${esc(h.name)}</span>`).join('');
-    } else {
-      habits.innerHTML = '<span class="none">No habits linked — link them from the Habits tab.</span>';
-    }
-    item.appendChild(habits);
-    okrList.appendChild(item);
-  }
-}
-
-async function addOkr() {
-  if (!currentCycle) return;
-  const v = await openModal({
-    title: 'New OKR',
-    submitLabel: 'Add OKR',
-    fields: [
-      { key: 'title', label: 'Objective', placeholder: 'e.g. Be presentation-ready for Koblenz', required: true },
-    ],
-  });
-  if (!v) return;
-  const res = await apiFetch('/api/okrs', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cycleId: currentCycle, title: v.title.trim() }),
-  });
-  if (res.ok) openCycle(currentCycle);
-  else showToast((await res.json()).error || 'Could not add OKR');
-}
-
-async function editOkr(id, patch, cycleId) {
-  const res = await apiFetch(`/api/okrs/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(patch),
-  });
-  if (res.ok) openCycle(cycleId);
-}
-
-async function deleteOkr(id, title, cycleId, row) {
-  const confirmed = await openConfirm({
-    title: 'Delete OKR',
-    message: `Delete OKR "${title}"? Habits linked to it will be unlinked.`,
-  });
-  if (!confirmed) return;
-  deleteWithUndo(row, `OKR "${title}"`, async () => {
-    const res = await apiFetch(`/api/okrs/${id}`, { method: 'DELETE' });
-    if (res.ok) openCycle(cycleId);
-  });
-}
-
 function renderCycleMeta(c) {
   cycleMeta.innerHTML = '';
   const mk = (labelText, type, value, onchange) => {
@@ -2875,8 +2835,28 @@ function buildPriorityRow(item, index) {
       regrowPriorityBoxes();
       scheduleCycleSave();
     },
+    onReorder: () => {
+      cyclePriorities = [...priorityList.querySelectorAll('.item-box')].map((row) => ({
+        title: row.querySelector('.item-box-title').value,
+        content: row.querySelector('.item-box-input').value,
+      }));
+      renderPriorityList();
+      regrowPriorityBoxes();
+      scheduleCycleSave();
+    },
   });
 }
+
+// Dropping past the last box (i.e. not over any .item-box) appends it as the
+// last item. Bound once here, not inside renderPriorityList, since
+// priorityList is a persistent element re-populated on every render.
+priorityList.addEventListener('dragover', (e) => {
+  const dragging = priorityList.querySelector('.item-box.dragging');
+  if (!dragging) return;
+  e.preventDefault();
+  if (e.target.closest('.item-box')) return; // a box's own listener already handled it
+  priorityList.appendChild(dragging);
+});
 
 addPriorityBtn.addEventListener('click', () => {
   cyclePriorities.push({ title: '', content: '' });
@@ -2886,7 +2866,6 @@ addPriorityBtn.addEventListener('click', () => {
 });
 
 addCycleBtn.onclick = addCycle;
-addOkrBtn.onclick = addOkr;
 addGoalBtn.onclick = addGoal;
 
 // --- Habits tab: sidebar list + per-habit detail page -----------------------
@@ -2997,23 +2976,46 @@ habitNotes.addEventListener('blur', () => { clearTimeout(habitNotesTimer); saveH
 
 // --- habits overview --------------------------------------------------------
 async function loadOverview() {
-  const [data, okrs, cycles] = await Promise.all([
-    apiFetch('/api/overview?days=14').then((r) => r.json()),
-    apiFetch('/api/okrs').then((r) => r.json()),
-    apiFetch('/api/cycles').then((r) => r.json()),
-  ]);
+  const data = await apiFetch('/api/overview?days=14').then((r) => r.json());
   habitsCache = data.habits;
   overview.innerHTML = '';
   if (!data.habits.length) {
-    overview.innerHTML = '<div class="habits-empty">No habits yet. Click “+ Add habit” to track a daily checkbox or number — optionally link it to a cycle OKR.</div>';
+    overview.innerHTML = '<div class="habits-empty">No habits yet. Click “+ Add habit” to track a daily checkbox or number.</div>';
     return;
   }
-  for (const [index, h] of data.habits.entries()) {
+  for (const h of data.habits) {
     const card = document.createElement('div');
     card.className = 'ov-card';
+    card.dataset.habitId = h.id;
 
     const top = document.createElement('div');
     top.className = 'ov-top';
+
+    // Drag handle for reordering — same pattern as the daily habits list and
+    // checklist items (only the grip is draggable, not the whole card).
+    const grip = document.createElement('span');
+    grip.className = 'drag-handle';
+    grip.draggable = true;
+    grip.innerHTML = GRIP_SVG;
+    top.appendChild(grip);
+    grip.addEventListener('dragstart', (e) => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', h.id); // Firefox requires data to be set for drag to start
+      card.classList.add('dragging');
+    });
+    grip.addEventListener('dragend', async () => {
+      card.classList.remove('dragging');
+      const ids = [...overview.querySelectorAll('.ov-card')].map((c) => c.dataset.habitId);
+      if (!(await saveHabitOrder(ids))) loadOverview(); // fell out of sync — rebuild from truth
+    });
+    card.addEventListener('dragover', (e) => {
+      const dragging = overview.querySelector('.ov-card.dragging');
+      if (!dragging || dragging === card) return;
+      e.preventDefault();
+      const rect = card.getBoundingClientRect();
+      const before = e.clientY < rect.top + rect.height / 2;
+      overview.insertBefore(dragging, before ? card : card.nextSibling);
+    });
 
     const nameInp = document.createElement('input');
     nameInp.className = 'ov-name';
@@ -3036,24 +3038,6 @@ async function loadOverview() {
       unitInp.onchange = () => editHabit(h.id, { unit: unitInp.value });
       top.appendChild(unitInp);
     }
-
-    top.appendChild(buildOkrSelect(h, okrs, cycles));
-
-    const moveUp = document.createElement('button');
-    moveUp.className = 'ov-move';
-    moveUp.textContent = '↑';
-    moveUp.title = 'Move habit up';
-    moveUp.disabled = index === 0;
-    moveUp.onclick = () => moveHabit(h.id, -1);
-    top.appendChild(moveUp);
-
-    const moveDown = document.createElement('button');
-    moveDown.className = 'ov-move';
-    moveDown.textContent = '↓';
-    moveDown.title = 'Move habit down';
-    moveDown.disabled = index === data.habits.length - 1;
-    moveDown.onclick = () => moveHabit(h.id, 1);
-    top.appendChild(moveDown);
 
     top.insertAdjacentHTML('beforeend', `<span class="ov-streak">${h.streak}d streak</span><span class="ov-spacer"></span>`);
 
@@ -3086,34 +3070,17 @@ async function loadOverview() {
   }
 }
 
-// dropdown linking a habit to an OKR, grouped by cycle
-function buildOkrSelect(h, okrs, cycles) {
-  const sel = document.createElement('select');
-  sel.className = 'ov-okr-select';
-  const none = document.createElement('option');
-  none.value = '';
-  none.textContent = 'No OKR';
-  sel.appendChild(none);
-
-  const cycleName = (id) => (cycles.find((c) => c.id === id) || {}).name || 'Other';
-  // group OKRs by cycle
-  const byCycle = {};
-  for (const o of okrs) (byCycle[o.cycleId] ||= []).push(o);
-  for (const cycleId of Object.keys(byCycle)) {
-    const group = document.createElement('optgroup');
-    group.label = cycleName(cycleId);
-    for (const o of byCycle[cycleId]) {
-      const opt = document.createElement('option');
-      opt.value = o.id;
-      opt.textContent = o.title;
-      if (h.okrId === o.id) opt.selected = true;
-      group.appendChild(opt);
-    }
-    sel.appendChild(group);
-  }
-  sel.onchange = () => editHabit(h.id, { okrId: sel.value || null }).then(loadOverview);
-  return sel;
-}
+// Dropping past the last card (i.e. not over any .ov-card) appends it as the
+// last item. Bound once here, not inside loadOverview, since `overview` is a
+// persistent element re-populated on every load — a listener added inside
+// the function would stack up a new one on every call.
+overview.addEventListener('dragover', (e) => {
+  const dragging = overview.querySelector('.ov-card.dragging');
+  if (!dragging) return;
+  e.preventDefault();
+  if (e.target.closest('.ov-card')) return; // a card's own listener already handled it
+  overview.appendChild(dragging);
+});
 
 async function editHabit(id, patch) {
   const res = await apiFetch(`/api/habits/${id}`, {
@@ -3143,20 +3110,6 @@ async function saveHabitOrder(ids) {
     return false;
   }
   return true;
-}
-
-async function moveHabit(id, direction) {
-  const index = habitsCache.findIndex((h) => h.id === id);
-  if (index === -1) return;
-  const targetIndex = index + direction;
-  if (targetIndex < 0 || targetIndex >= habitsCache.length) return;
-  const reordered = habitsCache.slice();
-  [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
-  const ids = reordered.map((h) => h.id);
-  if (!(await saveHabitOrder(ids))) return;
-  habitsCache = reordered;
-  renderHabitNav();
-  loadOverview();
 }
 
 addHabitBtn.onclick = addHabit;

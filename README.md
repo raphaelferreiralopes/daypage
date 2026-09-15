@@ -1,29 +1,40 @@
 # 📓 Journal
 
-A personal daily journal. Each day gets its own page. **Only today's page is editable** — past days are view-only. Your entries are plain Markdown files in `entries/`, so you fully own your data.
+A personal productivity system: daily journal, habits, cycles/OKRs, time tracking, recurring checklists, and a learning log — one app, one account per user.
 
-## Run
+Multi-user, backed by [Supabase](https://supabase.com) (Postgres + Auth). Each user signs in with email/password; Postgres row-level security keeps every user's data isolated, not just the app layer.
 
-```bash
-cd journal-app
-node server.js
-```
+## Run locally
 
-Then open http://localhost:3000
+1. Create a Supabase project, then copy `.env.example` to `.env` and fill in `SUPABASE_URL` and `SUPABASE_ANON_KEY` (Settings → API in the Supabase dashboard).
+2. Apply the SQL files in `supabase/migrations/` to that project, in order (via the Supabase SQL editor, or the Supabase CLI).
+3. `npm install`
+4. `npm start` (or `npm run dev` to run through the Vercel CLI, matching how it's deployed)
 
-(Optional: `PORT=4000 node server.js` to use a different port.)
+Then open `http://localhost:3000`, sign up, and sign in.
 
 ## How it works
 
-- The "only today is editable" rule is enforced **server-side** — past days return `403` on any save attempt, not just hidden in the UI.
-- Entries auto-save ~0.6s after you stop typing (and on blur).
-- Each entry is stored at `entries/YYYY-MM-DD.md`. Back them up or edit them with any tool.
-- "Today" is based on your Mac's local date.
+- Auth is Supabase Auth (email/password). The browser signs in directly against Supabase and attaches the session's JWT to every API call; the server verifies that JWT and Postgres RLS enforces isolation independently — see `lib/auth.js`.
+- **Only today's page is editable** — past days, past weeks, and ended cycles are view-only. This is enforced **server-side** (a save attempt outside the allowed window is rejected, not just hidden in the UI).
+- Notes/Reflexion/Learnings/Priorities auto-save ~0.6s after you stop typing (and on blur).
+- "Today" is based on the server's local date.
+
+## Views
+
+- **Journal** — one page per day, with Time / Habits / Notes / Reflexion / Learnings / Recap tabs.
+- **Cycles** — a multi-week block with its own Priorities (Rules page), OKRs, and progress tracking.
+- **Habits** — daily checkbox/number tracking, streaks, and a 90-day heatmap per habit.
+- **Time** — a simple timer plus manual time entries, grouped by project.
+- **Checklist** — recurring checklists that reset every day.
+- **Goals** — longer-term yearly goals, separate from a cycle's OKRs.
+- **Life** — a one-line-per-day recap calendar (month/year view).
+- **Learning Log** — every day's Learnings in one place, newest first.
 
 ## Files
 
-- `server.js` — zero-dependency Node server (API + static files)
-- `public/` — the browser UI (`index.html`, `style.css`, `app.js`)
-- `entries/` — your journal, one Markdown file per day
-# Journal-app
-# Journal-app
+- `api/index.js` — Express app: all API routes
+- `lib/` — auth (`auth.js`), Supabase client (`supabase.js`), all data access (`db.js`)
+- `public/` — the browser UI: `index.html` (landing page), `app.html` + `app.js` + `style.css` (the app), `auth.js` (sign-in gate)
+- `supabase/migrations/` — the database schema, as sequential SQL migrations
+- `scripts/migrate-to-supabase.js` — one-off importer from the old flat-file version of this app into a Supabase account; not part of normal operation

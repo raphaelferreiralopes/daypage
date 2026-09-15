@@ -137,12 +137,6 @@ app.get(
   })
 );
 
-// --- OKRs ----------------------------------------------------------------
-app.get('/api/okrs', h(async (req, res) => res.json(await db.listOkrs(req.supabase, req.userId, req.query.cycleId))));
-app.post('/api/okrs', h(async (req, res) => res.json(await db.createOkr(req.supabase, req.userId, req.body))));
-app.put('/api/okrs/:id', h(async (req, res) => res.json(await db.updateOkr(req.supabase, req.userId, req.params.id, req.body))));
-app.delete('/api/okrs/:id', h(async (req, res) => res.json(await db.deleteOkr(req.supabase, req.userId, req.params.id))));
-
 // --- goals -------------------------------------------------------------
 app.get(
   '/api/goals',
