@@ -450,6 +450,12 @@ function switchDayPage(page) {
   dayPage = page;
   for (const key of Object.keys(dayPages)) dayPages[key].hidden = key !== page;
   dayTabs.forEach((t) => t.classList.toggle('active', t.dataset.page === page));
+  // Re-run autoGrow now that the page is actually visible — measuring
+  // scrollHeight while display:none (i.e. before this point) reads 0, which
+  // is what left the bottom of a long entry clipped until the next keypress.
+  if (page === 'notes') autoGrowEditor();
+  if (page === 'reflexion') autoGrowReflexionEditor();
+  if (page === 'learnings') autoGrowLearningsEditor();
   if (page === 'notes' && editable) editor.focus();
   if (page === 'reflexion' && editable) reflexionEditor.focus();
   if (page === 'sentence' && editable) summaryInput.focus();
@@ -1536,6 +1542,11 @@ function switchWeekPage(page) {
   weekPage = page;
   for (const key of Object.keys(weekPages)) weekPages[key].hidden = key !== page;
   weekTabs.forEach((t) => t.classList.toggle('active', t.dataset.page === page));
+  // See the same fix in switchDayPage: recompute now that the page is
+  // actually visible, instead of relying on the stale 0-height measured
+  // while it was still display:none.
+  if (page === 'notes') autoGrowWeekEditor();
+  if (page === 'reflexion') autoGrowWeekReflexionEditor();
   if (page === 'notes' && weekEditable) weekEditor.focus();
   if (page === 'reflexion' && weekEditable) weekReflexionEditor.focus();
 }
