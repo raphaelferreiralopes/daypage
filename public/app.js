@@ -35,6 +35,7 @@ const habitsTitle = document.getElementById('habitsTitle');
 const overviewEl = document.getElementById('overview');
 const habitDetail = document.getElementById('habitDetail');
 const habitNotes = document.getElementById('habitNotes');
+const habitDetailStats = document.getElementById('habitDetailStats');
 const addHabitBtn2El = document.getElementById('addHabitBtn2');
 // time overview
 const timeView = document.getElementById('timeView');
@@ -113,7 +114,7 @@ const cycleMeta = document.getElementById('cycleMeta');
 const priorityList = document.getElementById('priorityList');
 const addPriorityBtn = document.getElementById('addPriorityBtn');
 const cycleReadonlyNote = document.getElementById('cycleReadonlyNote');
-let cyclePriorities = [''];
+let cyclePriorities = [{ title: '', content: '' }];
 const okrList = document.getElementById('okrList');
 const addOkrBtn = document.getElementById('addOkrBtn');
 const cycleProgress = document.getElementById('cycleProgress');
@@ -542,11 +543,11 @@ weekEditor.addEventListener('keyup', renderWeekBackdrop);
 weekEditor.addEventListener('focus', renderWeekBackdrop);
 weekEditor.addEventListener('blur', renderWeekBackdrop);
 
-// Shared parser for any "list of short text items" field that's stored,
-// unchanged on the server, as a single text column holding a JSON array —
-// used by both day_learnings.content (Learnings) and cycle_notes.content
-// (Priorities). A plain non-JSON string (content saved before either field
-// was a list) is read back as a single first item, so nothing is lost.
+// Shared parser for a "list of short text items" field stored, unchanged on
+// the server, as a single text column holding a JSON array of strings —
+// used by day_learnings.content (Learnings). A plain non-JSON string
+// (content saved before this field was a list) is read back as a single
+// first item, so nothing is lost.
 function parseTextList(raw) {
   if (!raw) return [''];
   try {
@@ -558,6 +559,25 @@ function parseTextList(raw) {
   return [raw];
 }
 
+// Same idea as parseTextList, but each item also has a user-given title
+// (cycle_notes.content, i.e. Cycle Priorities) — so this handles one extra
+// prior shape too: the flat string-array format Priorities briefly used
+// before they had titles, where each string becomes an untitled item.
+function parsePriorities(raw) {
+  if (!raw) return [{ title: '', content: '' }];
+  try {
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) {
+      if (!arr.length) return [{ title: '', content: '' }];
+      if (typeof arr[0] === 'string') return arr.map((content) => ({ title: '', content: String(content) }));
+      return arr.map((item) => ({ title: String(item?.title || ''), content: String(item?.content || '') }));
+    }
+  } catch {
+    // not JSON — pre-existing freeform rules text from before this was a list at all
+  }
+  return [{ title: '', content: raw }];
+}
+
 function autoGrowTextarea(ta) {
   ta.style.height = 'auto';
   ta.style.height = ta.scrollHeight + 'px';
@@ -566,14 +586,30 @@ function autoGrowTextarea(ta) {
 // One labeled, deletable, auto-growing textarea — the shared shape behind
 // the Learnings boxes and the Cycle Priorities boxes. Returns the row
 // element; state (which array, which save call) stays with the caller.
-function buildBoxRow({ label, text, placeholder, editable, onInput, onBlur, onDelete }) {
+// The label is a plain positional caption ("Learning 2") by default; pass
+// titleValue (+ onTitleInput) to make it a renameable header instead (Cycle
+// Priorities) — `label` then becomes just its placeholder ("Priority 2"),
+// never stored text, so an unnamed box still shows a sensible default.
+function buildBoxRow({ label, titleValue, onTitleInput, text, placeholder, editable, onInput, onBlur, onDelete }) {
   const row = document.createElement('div');
   row.className = 'item-box';
 
-  const labelEl = document.createElement('div');
-  labelEl.className = 'item-box-label';
-  labelEl.textContent = label;
-  row.appendChild(labelEl);
+  if (titleValue !== undefined) {
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.className = 'item-box-title';
+    titleInput.placeholder = label;
+    titleInput.value = titleValue;
+    titleInput.disabled = !editable;
+    titleInput.addEventListener('input', () => onTitleInput(titleInput.value));
+    titleInput.addEventListener('blur', onBlur);
+    row.appendChild(titleInput);
+  } else {
+    const labelEl = document.createElement('div');
+    labelEl.className = 'item-box-label';
+    labelEl.textContent = label;
+    row.appendChild(labelEl);
+  }
 
   const ta = document.createElement('textarea');
   ta.className = 'item-box-input';
@@ -1278,7 +1314,37 @@ function renderHabits(habits, values) {
   for (const h of ordered) {
     const row = document.createElement('div');
     row.className = 'habit-row';
+    row.dataset.habitId = h.id;
     const val = values[h.id];
+
+    // Drag handle for reordering, same pattern as checklist items: only the
+    // grip is draggable (not the whole row), so it can't be triggered by a
+    // click on the checkbox/value box/delete button.
+    if (editable) {
+      const grip = document.createElement('span');
+      grip.className = 'drag-handle';
+      grip.draggable = true;
+      grip.innerHTML = GRIP_SVG;
+      row.appendChild(grip);
+      grip.addEventListener('dragstart', (e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', h.id); // Firefox requires data to be set for drag to start
+        row.classList.add('dragging');
+      });
+      grip.addEventListener('dragend', async () => {
+        row.classList.remove('dragging');
+        const ids = [...habitList.querySelectorAll('.habit-row')].map((r) => r.dataset.habitId);
+        if (!(await saveHabitOrder(ids))) openDay(current); // fell out of sync — rebuild from truth
+      });
+      row.addEventListener('dragover', (e) => {
+        const dragging = habitList.querySelector('.habit-row.dragging');
+        if (!dragging || dragging === row) return;
+        e.preventDefault();
+        const rect = row.getBoundingClientRect();
+        const before = e.clientY < rect.top + rect.height / 2;
+        habitList.insertBefore(dragging, before ? row : row.nextSibling);
+      });
+    }
 
     // control (checkbox or value box) on the LEFT
     const control = document.createElement('div');
@@ -1317,6 +1383,18 @@ function renderHabits(habits, values) {
     habitList.appendChild(row);
   }
 }
+
+// Dropping past the last row (i.e. not over any .habit-row) appends it as
+// the last item. Bound once here, not inside renderHabits, since habitList
+// itself is a persistent element re-populated on every render — a listener
+// added inside the function would stack up a new one on every call.
+habitList.addEventListener('dragover', (e) => {
+  const dragging = habitList.querySelector('.habit-row.dragging');
+  if (!dragging) return;
+  e.preventDefault();
+  if (e.target.closest('.habit-row')) return; // a row's own listener already handled it
+  habitList.appendChild(dragging);
+});
 
 async function saveHabit(habitId, value) {
   statusEl.textContent = 'Saving…';
@@ -2183,7 +2261,7 @@ async function loadCycles(selectId) {
     cycleBadge.textContent = '';
     cycleStatus.textContent = '';
     cycleMeta.innerHTML = '';
-    cyclePriorities = [''];
+    cyclePriorities = [{ title: '', content: '' }];
     cycleEditable = false;
     renderPriorityList();
     return;
@@ -2215,7 +2293,7 @@ async function openCycle(id) {
   cycleBadge.className = c.isCurrent ? 'current' : '';
   cycleLength.textContent = cycleWeeks(c.start, c.end);
   cycleStatus.textContent = c.editable ? '' : 'Read-only';
-  cyclePriorities = parseTextList(c.notes);
+  cyclePriorities = parsePriorities(c.notes);
   renderPriorityList();
   cycleReadonlyNote.hidden = c.editable;
   renderCycleMeta(c);
@@ -2777,20 +2855,22 @@ function regrowPriorityBoxes() {
 
 function renderPriorityList() {
   priorityList.innerHTML = '';
-  cyclePriorities.forEach((text, i) => priorityList.appendChild(buildPriorityRow(text, i)));
+  cyclePriorities.forEach((item, i) => priorityList.appendChild(buildPriorityRow(item, i)));
 }
 
-function buildPriorityRow(text, index) {
+function buildPriorityRow(item, index) {
   return buildBoxRow({
     label: `Priority ${index + 1}`,
-    text,
+    titleValue: item.title,
+    onTitleInput: (v) => { cyclePriorities[index].title = v; scheduleCycleSave(); },
+    text: item.content,
     placeholder: 'What matters for this priority?',
     editable: cycleEditable,
-    onInput: (v) => { cyclePriorities[index] = v; scheduleCycleSave(); },
+    onInput: (v) => { cyclePriorities[index].content = v; scheduleCycleSave(); },
     onBlur: () => { clearTimeout(cycleSaveTimer); saveCycleNotes(); },
     onDelete: () => {
       cyclePriorities.splice(index, 1);
-      if (!cyclePriorities.length) cyclePriorities.push('');
+      if (!cyclePriorities.length) cyclePriorities.push({ title: '', content: '' });
       renderPriorityList();
       regrowPriorityBoxes();
       scheduleCycleSave();
@@ -2799,11 +2879,10 @@ function buildPriorityRow(text, index) {
 }
 
 addPriorityBtn.addEventListener('click', () => {
-  cyclePriorities.push('');
+  cyclePriorities.push({ title: '', content: '' });
   renderPriorityList();
   regrowPriorityBoxes();
-  const boxes = priorityList.querySelectorAll('.item-box-input');
-  boxes[boxes.length - 1]?.focus();
+  priorityList.querySelector('.item-box:last-child .item-box-title')?.focus();
 });
 
 addCycleBtn.onclick = addCycle;
@@ -2859,12 +2938,46 @@ async function showHabitDetail(id) {
   addHabitBtn2El.hidden = true;
   overviewEl.hidden = true;
   habitDetail.hidden = false;
+  habitDetailStats.innerHTML = ''; // clear the previous habit's stats while the new ones load
   renderHabitNav();
 
-  const notes = await apiFetch(`/api/habits/${id}/notes`).then((r) => r.json());
+  const [notes, overview90] = await Promise.all([
+    apiFetch(`/api/habits/${id}/notes`).then((r) => r.json()),
+    apiFetch('/api/overview?days=90').then((r) => r.json()),
+  ]);
+  if (openHabitId !== id) return; // user navigated elsewhere while this was loading
+  const h = overview90.habits.find((x) => x.id === id) || habit;
+  renderHabitDetailStats(h, overview90.dates, overview90.today);
   habitNotes.value = notes.content || '';
   refreshRich(habitNotes);
   habitNotes.focus();
+}
+
+// stats + 90-day heatmap shown above a habit's notes on its detail page
+function renderHabitDetailStats(h, dates, today) {
+  const isDone = (date) => {
+    const v = h.values[date];
+    return h.type === 'check' ? v === true : v != null && String(v).trim() !== '';
+  };
+  const completion = Math.round((dates.filter(isDone).length / dates.length) * 100);
+
+  habitDetailStats.innerHTML = `
+    <div class="habit-stats">
+      <div class="habit-stat"><span class="habit-stat-value">${h.streak}d</span><span class="habit-stat-label">Current streak</span></div>
+      <div class="habit-stat"><span class="habit-stat-value">${h.longestStreak}d</span><span class="habit-stat-label">Longest streak</span></div>
+      <div class="habit-stat"><span class="habit-stat-value">${completion}%</span><span class="habit-stat-label">Last ${dates.length} days</span></div>
+    </div>
+  `;
+  const heatmap = document.createElement('div');
+  heatmap.className = 'habit-heatmap';
+  for (const date of [...dates].reverse()) {
+    const done = isDone(date);
+    const cell = document.createElement('div');
+    cell.className = 'heatmap-cell' + (done ? ' done' : '') + (date === today ? ' is-today' : '');
+    cell.title = h.type === 'value' && done ? `${date}: ${h.values[date]}` : date;
+    heatmap.appendChild(cell);
+  }
+  habitDetailStats.appendChild(heatmap);
 }
 
 function scheduleHabitNotesSave() {

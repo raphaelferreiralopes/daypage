@@ -553,6 +553,18 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 }
 #habitNotes::placeholder, #projectNotes::placeholder { color: var(--faint); }
 
+/* habit detail: current/longest streak + completion rate, and a compact
+   90-day heatmap (GitHub-contributions style) above the notes */
+#habitDetailStats:empty { display: none; }
+.habit-stats { display: flex; gap: 28px; margin-bottom: 14px; flex-shrink: 0; }
+.habit-stat { display: flex; flex-direction: column; gap: 2px; }
+.habit-stat-value { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+.habit-stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.habit-heatmap { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 18px; flex-shrink: 0; }
+.heatmap-cell { width: 13px; height: 13px; border-radius: 3px; background: var(--bg); border: 1px solid var(--border); }
+.heatmap-cell.done { background: var(--accent-soft); border-color: var(--accent-soft); }
+.heatmap-cell.is-today { box-shadow: 0 0 0 1.5px var(--accent); }
+
 /* time overview (Time tab) */
 #timeGrand { font-size: 13px; font-weight: 590; color: var(--muted); }
 #projectOverview { display: flex; flex-direction: column; gap: 12px; }
@@ -848,6 +860,17 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
   background: var(--panel); box-shadow: var(--shadow-sm);
 }
 .item-box-label { font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); font-weight: 650; margin-bottom: 6px; }
+/* renameable header variant of the label (Cycle Priorities) — a real
+   heading, not the small uppercase caption above */
+.item-box-title {
+  display: block; width: 100%; margin-bottom: 6px;
+  background: transparent; border: none; border-bottom: 1px solid transparent;
+  color: var(--text); font: inherit; font-size: 15.5px; font-weight: 650;
+  letter-spacing: -0.006em; padding: 2px 0 4px;
+}
+.item-box-title::placeholder { color: var(--faint); font-weight: 650; }
+.item-box-title:hover, .item-box-title:focus { border-bottom-color: var(--border-strong); outline: none; }
+.item-box-title:disabled { color: var(--text); }
 .item-box-input {
   display: block; width: 100%; resize: none; overflow: hidden;
   background: transparent; border: 0; outline: none; padding: 0;
@@ -951,14 +974,16 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 #checklistList { display: flex; flex-direction: column; gap: 16px; }
 .checklist-progress { font-size: 12px; color: var(--muted); margin: -4px 0 10px; }
 .checklist-card .habit-row { padding: 5px 0; }
-.checklist-item.dragging { opacity: 0.4; }
-.checklist-item .drag-handle {
+/* drag-to-reorder handle — shared by checklist items and the daily habit
+   list, both of which are built on the .habit-row base */
+.habit-row.dragging { opacity: 0.4; }
+.habit-row .drag-handle {
   flex-shrink: 0; display: flex; align-items: center; justify-content: center;
   width: 16px; height: 20px; color: var(--faint); opacity: 0; transition: opacity 0.15s;
   cursor: grab;
 }
-.checklist-item .drag-handle svg { width: 14px; height: 14px; pointer-events: none; }
-.checklist-item:hover .drag-handle { opacity: 1; }
+.habit-row .drag-handle svg { width: 14px; height: 14px; pointer-events: none; }
+.habit-row:hover .drag-handle { opacity: 1; }
 .checklist-item input.name {
   flex: 1; background: transparent; border: none; border-bottom: 1px solid transparent;
   color: var(--text); font: inherit; padding: 2px 0; border-radius: 0;
