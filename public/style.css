@@ -804,13 +804,6 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 .okr-habits .pill { font-size: 11px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 2px 8px; }
 .okr-habits .none { font-size: 12px; color: var(--muted); font-style: italic; }
 
-#cycleEditor {
-  flex: 1; width: 100%; resize: none; background: transparent; border: none; outline: none;
-  color: transparent; caret-color: var(--text); font-size: 15px; line-height: 1.7; letter-spacing: -0.003em;
-}
-#cycleEditor::placeholder { color: var(--faint); }
-#cycleEditor:disabled { color: var(--muted); }
-
 /* weekly notes — mirrors daily editor (auto-grow, backdrop layer) */
 #weekEditorWrap { position: relative; }
 #weekEditorBackdrop, #weekEditor {
@@ -835,37 +828,43 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 /* learnings — a list of separate "Learning N" boxes instead of one big note */
 #learningsHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 #learningsHeader h3 { margin: 0; font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); font-weight: 650; }
-#addLearningBtn {
+#learningsReadonlyNote { font-size: 12px; color: var(--muted); margin-top: 12px; display: flex; align-items: center; gap: 7px; }
+
+/* Generic "labeled box list" — a header with a + button above a stack of
+   deletable, auto-growing textareas. Used by Learnings (day_learnings) and
+   Cycle Priorities (cycle_notes); see buildBoxRow in app.js. */
+.boxlist-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.boxlist-header h3 { margin: 0; font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); font-weight: 650; }
+.boxlist-add-btn {
   background: var(--bg); border: 1px solid var(--border-strong); color: var(--muted);
   padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer;
 }
-#addLearningBtn:hover { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent); }
-#learningsList { display: flex; flex-direction: column; gap: 12px; }
-.learning-item {
+.boxlist-add-btn:hover { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent); }
+.item-box-list { display: flex; flex-direction: column; gap: 12px; }
+.item-box {
   position: relative;
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: 12px 40px 12px 16px;
   background: var(--panel); box-shadow: var(--shadow-sm);
 }
-.learning-label { font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); font-weight: 650; margin-bottom: 6px; }
-.learning-input {
+.item-box-label { font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); font-weight: 650; margin-bottom: 6px; }
+.item-box-input {
   display: block; width: 100%; resize: none; overflow: hidden;
   background: transparent; border: 0; outline: none; padding: 0;
   color: var(--text); font: inherit; font-size: 15px; line-height: 1.6; letter-spacing: -0.003em;
 }
-.learning-input::placeholder { color: var(--faint); }
-.learning-input:disabled { color: var(--muted); cursor: default; }
-.learning-del {
+.item-box-input::placeholder { color: var(--faint); }
+.item-box-input:disabled { color: var(--muted); cursor: default; }
+.item-box-del {
   position: absolute; top: 10px; right: 10px;
   background: none; border: none; color: var(--faint); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; border-radius: 6px;
   opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s;
 }
-.learning-del svg { width: 14px; height: 14px; }
-.learning-item:hover .learning-del { opacity: 1; }
-.learning-del:hover { color: var(--red); background: var(--red-soft); }
-#learningsReadonlyNote { font-size: 12px; color: var(--muted); margin-top: 12px; display: flex; align-items: center; gap: 7px; }
+.item-box-del svg { width: 14px; height: 14px; }
+.item-box:hover .item-box-del { opacity: 1; }
+.item-box-del:hover { color: var(--red); background: var(--red-soft); }
 
 /* reflexion (day + week) — mirrors daily editor (auto-grow, backdrop layer) */
 #reflexionWrap, #weekReflexionWrap { position: relative; }
@@ -896,6 +895,14 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 .week-learning-block { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; background: var(--panel); box-shadow: var(--shadow-sm); margin-bottom: 14px; }
 .week-learning-block h4 { margin: 0 0 8px; font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); font-weight: 650; }
 .week-learning-text { white-space: pre-wrap; overflow-wrap: break-word; font-size: 14.5px; line-height: 1.7; letter-spacing: -0.003em; }
+
+/* Learning Log — reuses .week-learning-block's card, but each entry is
+   clickable (jumps to that day) and lists its learnings as bullets. */
+.learning-log-block { cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.learning-log-block:hover { background: var(--hover); border-color: var(--accent-soft); }
+.learning-log-items { margin: 0; padding-left: 20px; }
+.learning-log-items li { font-size: 14.5px; line-height: 1.7; letter-spacing: -0.003em; }
+.learning-log-items li + li { margin-top: 4px; }
 
 /* Life view — Recap calendar */
 #entryHeader #lifeLabel { font-size: 18px; }

@@ -48,6 +48,8 @@ const projectDetail = document.getElementById('projectDetail');
 const lifeView = document.getElementById('lifeView');
 const lifeLabel = document.getElementById('lifeLabel');
 const lifeCalendar = document.getElementById('lifeCalendar');
+const learningLogView = document.getElementById('learningLogView');
+const learningLogList = document.getElementById('learningLogList');
 const lifePrev = document.getElementById('lifePrev');
 const lifeNext = document.getElementById('lifeNext');
 const lifeTodayBtn = document.getElementById('lifeTodayBtn');
@@ -108,8 +110,10 @@ const cycleBadge = document.getElementById('cycleBadge');
 const cycleLength = document.getElementById('cycleLength');
 const cycleStatus = document.getElementById('cycleStatus');
 const cycleMeta = document.getElementById('cycleMeta');
-const cycleEditor = document.getElementById('cycleEditor');
+const priorityList = document.getElementById('priorityList');
+const addPriorityBtn = document.getElementById('addPriorityBtn');
 const cycleReadonlyNote = document.getElementById('cycleReadonlyNote');
+let cyclePriorities = [''];
 const okrList = document.getElementById('okrList');
 const addOkrBtn = document.getElementById('addOkrBtn');
 const cycleProgress = document.getElementById('cycleProgress');
@@ -432,7 +436,7 @@ async function openDay(date) {
   summaryInput.disabled = !entry.editable;
   renderEditorBackdrop();
   autoGrowEditor();
-  learningsItems = parseLearnings(entry.learnings);
+  learningsItems = parseTextList(entry.learnings);
   addLearningBtn.hidden = !entry.editable;
   learningsReadonlyNote.hidden = entry.editable;
   renderLearningsList();
@@ -459,7 +463,7 @@ function switchDayPage(page) {
   if (page === 'notes' && editable) editor.focus();
   if (page === 'reflexion' && editable) reflexionEditor.focus();
   if (page === 'sentence' && editable) summaryInput.focus();
-  if (page === 'learnings' && editable) learningsList.querySelector('.learning-input')?.focus();
+  if (page === 'learnings' && editable) learningsList.querySelector('.item-box-input')?.focus();
 }
 dayTabs.forEach((t) => (t.onclick = () => switchDayPage(t.dataset.page)));
 
@@ -538,12 +542,12 @@ weekEditor.addEventListener('keyup', renderWeekBackdrop);
 weekEditor.addEventListener('focus', renderWeekBackdrop);
 weekEditor.addEventListener('blur', renderWeekBackdrop);
 
-// Learnings are stored server-side as a single text field (day_learnings.content,
-// no schema change needed), but edited here as separate "Learning N" boxes — so
-// that field holds a JSON array of strings. Older entries (from before this was
-// a list) hold a plain string instead; parseLearnings treats that whole string
-// as a single first item so nothing existing gets lost.
-function parseLearnings(raw) {
+// Shared parser for any "list of short text items" field that's stored,
+// unchanged on the server, as a single text column holding a JSON array —
+// used by both day_learnings.content (Learnings) and cycle_notes.content
+// (Priorities). A plain non-JSON string (content saved before either field
+// was a list) is read back as a single first item, so nothing is lost.
+function parseTextList(raw) {
   if (!raw) return [''];
   try {
     const arr = JSON.parse(raw);
@@ -558,11 +562,50 @@ function autoGrowTextarea(ta) {
   ta.style.height = 'auto';
   ta.style.height = ta.scrollHeight + 'px';
 }
+
+// One labeled, deletable, auto-growing textarea — the shared shape behind
+// the Learnings boxes and the Cycle Priorities boxes. Returns the row
+// element; state (which array, which save call) stays with the caller.
+function buildBoxRow({ label, text, placeholder, editable, onInput, onBlur, onDelete }) {
+  const row = document.createElement('div');
+  row.className = 'item-box';
+
+  const labelEl = document.createElement('div');
+  labelEl.className = 'item-box-label';
+  labelEl.textContent = label;
+  row.appendChild(labelEl);
+
+  const ta = document.createElement('textarea');
+  ta.className = 'item-box-input';
+  ta.rows = 1;
+  ta.placeholder = placeholder;
+  ta.value = text;
+  ta.disabled = !editable;
+  ta.addEventListener('input', () => {
+    onInput(ta.value);
+    autoGrowTextarea(ta);
+  });
+  ta.addEventListener('blur', onBlur);
+  row.appendChild(ta);
+
+  if (editable) {
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'item-box-del';
+    del.title = 'Remove this';
+    del.innerHTML = TRASH_SVG;
+    del.addEventListener('click', onDelete);
+    row.appendChild(del);
+  }
+
+  return row;
+}
+
 // Re-measures every learning box's height — needed the same way autoGrowEditor
 // is re-run in switchDayPage: a box built while its page was display:none
 // measures 0 and stays too short until this runs again while actually visible.
 function regrowLearningsBoxes() {
-  learningsList.querySelectorAll('.learning-input').forEach(autoGrowTextarea);
+  learningsList.querySelectorAll('.item-box-input').forEach(autoGrowTextarea);
 }
 
 function renderLearningsList() {
@@ -571,53 +614,28 @@ function renderLearningsList() {
 }
 
 function buildLearningRow(text, index) {
-  const row = document.createElement('div');
-  row.className = 'learning-item';
-
-  const label = document.createElement('div');
-  label.className = 'learning-label';
-  label.textContent = `Learning ${index + 1}`;
-  row.appendChild(label);
-
-  const ta = document.createElement('textarea');
-  ta.className = 'learning-input';
-  ta.rows = 1;
-  ta.placeholder = 'What did you learn?';
-  ta.value = text;
-  ta.disabled = !editable;
-  ta.addEventListener('input', () => {
-    learningsItems[index] = ta.value;
-    autoGrowTextarea(ta);
-    scheduleLearningsSave();
-  });
-  ta.addEventListener('blur', () => { clearTimeout(learningsSaveTimer); saveLearnings(); });
-  row.appendChild(ta);
-
-  if (editable) {
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'learning-del';
-    del.title = 'Remove this learning';
-    del.innerHTML = TRASH_SVG;
-    del.addEventListener('click', () => {
+  return buildBoxRow({
+    label: `Learning ${index + 1}`,
+    text,
+    placeholder: 'What did you learn?',
+    editable,
+    onInput: (v) => { learningsItems[index] = v; scheduleLearningsSave(); },
+    onBlur: () => { clearTimeout(learningsSaveTimer); saveLearnings(); },
+    onDelete: () => {
       learningsItems.splice(index, 1);
       if (!learningsItems.length) learningsItems.push('');
       renderLearningsList();
       regrowLearningsBoxes();
       scheduleLearningsSave();
-    });
-    row.appendChild(del);
-  }
-
-  if (!dayPages.learnings.hidden) autoGrowTextarea(ta);
-  return row;
+    },
+  });
 }
 
 addLearningBtn.addEventListener('click', () => {
   learningsItems.push('');
   renderLearningsList();
   regrowLearningsBoxes();
-  const boxes = learningsList.querySelectorAll('.learning-input');
+  const boxes = learningsList.querySelectorAll('.item-box-input');
   boxes[boxes.length - 1]?.focus();
 });
 
@@ -1684,7 +1702,7 @@ function renderWeekHabits(note) {
 // read-only rollup: each day's learnings text, Monday → Sunday
 function renderWeekLearnings(note) {
   weekLearningsSummaryEl.innerHTML = '';
-  const withText = note.learnings.filter((l) => parseLearnings(l.content).some((t) => t.trim()));
+  const withText = note.learnings.filter((l) => parseTextList(l.content).some((t) => t.trim()));
   if (!withText.length) {
     weekLearningsSummaryEl.innerHTML = '<div class="habits-empty">No learnings logged this week.</div>';
     return;
@@ -1694,7 +1712,7 @@ function renderWeekLearnings(note) {
     const block = document.createElement('div');
     block.className = 'week-learning-block';
     block.innerHTML = `<h4>${esc(dd.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }))}</h4><div class="week-learning-text"></div>`;
-    block.querySelector('.week-learning-text').textContent = parseLearnings(l.content).filter((t) => t.trim()).join('\n');
+    block.querySelector('.week-learning-text').textContent = parseTextList(l.content).filter((t) => t.trim()).join('\n');
     weekLearningsSummaryEl.appendChild(block);
   }
 }
@@ -1777,6 +1795,7 @@ async function switchView(next) {
   checklistView.hidden = next !== 'checklist';
   lifeView.hidden = next !== 'life';
   goalsView.hidden = next !== 'goals';
+  learningLogView.hidden = next !== 'learninglog';
   // sidebar contents per view
   journalControls.hidden = next !== 'journal';
   dayList.hidden = next !== 'journal';
@@ -1791,6 +1810,7 @@ async function switchView(next) {
   if (next === 'checklist') await loadChecklists();
   if (next === 'life') await openLife();
   if (next === 'goals') await loadYearGoals();
+  if (next === 'learninglog') await loadLearningLog();
 }
 navTabs.forEach((t) => (t.onclick = () => switchView(t.dataset.view)));
 
@@ -1833,6 +1853,46 @@ async function openDayRecap(date) {
   await switchView('journal');
   await openDay(date);
   switchDayPage('sentence');
+}
+
+// jump into the Journal view, open the day, and land on its Learnings tab
+async function openDayLearnings(date) {
+  await switchView('journal');
+  await openDay(date);
+  switchDayPage('learnings');
+}
+
+// --- learning log (every day's Learnings, newest first) ---------------------
+async function loadLearningLog() {
+  const list = await apiFetch('/api/learnings').then((r) => r.json());
+  renderLearningLog(list);
+}
+
+function renderLearningLog(list) {
+  learningLogList.innerHTML = '';
+  if (!list.length) {
+    learningLogList.innerHTML = '<div class="habits-empty">No learnings logged yet — add some on a day’s Learnings tab.</div>';
+    return;
+  }
+  for (const entry of [...list].reverse()) {
+    const items = parseTextList(entry.content).filter((t) => t.trim());
+    if (!items.length) continue;
+    const dd = new Date(entry.date + 'T00:00:00');
+    const block = document.createElement('div');
+    block.className = 'week-learning-block learning-log-block';
+    block.title = 'Open this day';
+    block.onclick = () => openDayLearnings(entry.date);
+    block.innerHTML = `<h4>${esc(dd.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' }))}</h4>`;
+    const ul = document.createElement('ul');
+    ul.className = 'learning-log-items';
+    for (const item of items) {
+      const li = document.createElement('li');
+      li.textContent = item;
+      ul.appendChild(li);
+    }
+    block.appendChild(ul);
+    learningLogList.appendChild(block);
+  }
 }
 
 // one line per day between start and end (inclusive), scrollable; optionally
@@ -2123,9 +2183,9 @@ async function loadCycles(selectId) {
     cycleBadge.textContent = '';
     cycleStatus.textContent = '';
     cycleMeta.innerHTML = '';
-    cycleEditor.value = '';
-    refreshRich(cycleEditor);
-    cycleEditor.disabled = true;
+    cyclePriorities = [''];
+    cycleEditable = false;
+    renderPriorityList();
     return;
   }
   for (const c of cycles) {
@@ -2155,9 +2215,8 @@ async function openCycle(id) {
   cycleBadge.className = c.isCurrent ? 'current' : '';
   cycleLength.textContent = cycleWeeks(c.start, c.end);
   cycleStatus.textContent = c.editable ? '' : 'Read-only';
-  cycleEditor.value = c.notes;
-  refreshRich(cycleEditor);
-  cycleEditor.disabled = !c.editable;
+  cyclePriorities = parseTextList(c.notes);
+  renderPriorityList();
   cycleReadonlyNote.hidden = c.editable;
   renderCycleMeta(c);
   renderCycleTimeProgress(c);
@@ -2174,7 +2233,10 @@ function switchCyclePage(page) {
   cyclePage = page;
   for (const key of Object.keys(cyclePages)) cyclePages[key].hidden = key !== page;
   cycleTabs.forEach((t) => t.classList.toggle('active', t.dataset.page === page));
-  if (page === 'rules' && cycleEditable) cycleEditor.focus();
+  // See switchDayPage's identical fix: a box built while this page was
+  // display:none measures a 0 height and stays too short until re-measured.
+  if (page === 'rules') regrowPriorityBoxes();
+  if (page === 'rules' && cycleEditable) priorityList.querySelector('.item-box-input')?.focus();
 }
 cycleTabs.forEach((t) => (t.onclick = () => switchCyclePage(t.dataset.page)));
 
@@ -2702,17 +2764,51 @@ async function saveCycleNotes() {
   const res = await apiFetch(`/api/cycle/${currentCycle}/notes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: cycleEditor.value }),
+    body: JSON.stringify({ content: JSON.stringify(cyclePriorities) }),
   });
   cycleStatus.textContent = res.ok ? 'Saved ✓' : '⚠ Could not save';
   if (!res.ok) showToast('Could not save');
 }
 
+// Re-measures every priority box's height — see regrowLearningsBoxes for why.
+function regrowPriorityBoxes() {
+  priorityList.querySelectorAll('.item-box-input').forEach(autoGrowTextarea);
+}
+
+function renderPriorityList() {
+  priorityList.innerHTML = '';
+  cyclePriorities.forEach((text, i) => priorityList.appendChild(buildPriorityRow(text, i)));
+}
+
+function buildPriorityRow(text, index) {
+  return buildBoxRow({
+    label: `Priority ${index + 1}`,
+    text,
+    placeholder: 'What matters for this priority?',
+    editable: cycleEditable,
+    onInput: (v) => { cyclePriorities[index] = v; scheduleCycleSave(); },
+    onBlur: () => { clearTimeout(cycleSaveTimer); saveCycleNotes(); },
+    onDelete: () => {
+      cyclePriorities.splice(index, 1);
+      if (!cyclePriorities.length) cyclePriorities.push('');
+      renderPriorityList();
+      regrowPriorityBoxes();
+      scheduleCycleSave();
+    },
+  });
+}
+
+addPriorityBtn.addEventListener('click', () => {
+  cyclePriorities.push('');
+  renderPriorityList();
+  regrowPriorityBoxes();
+  const boxes = priorityList.querySelectorAll('.item-box-input');
+  boxes[boxes.length - 1]?.focus();
+});
+
 addCycleBtn.onclick = addCycle;
 addOkrBtn.onclick = addOkr;
 addGoalBtn.onclick = addGoal;
-cycleEditor.addEventListener('input', scheduleCycleSave);
-cycleEditor.addEventListener('blur', () => { clearTimeout(cycleSaveTimer); saveCycleNotes(); });
 
 // --- Habits tab: sidebar list + per-habit detail page -----------------------
 let habitsCache = [];
@@ -3193,7 +3289,7 @@ function attachNotes(ta) {
   ta.addEventListener('blur', () => setTimeout(() => { if (slashTa === ta) closeSlash(); }, 150));
 }
 
-[editor, cycleEditor, habitNotes, projectNotes, weekEditor, reflexionEditor, weekReflexionEditor].forEach(attachNotes);
+[editor, habitNotes, projectNotes, weekEditor, reflexionEditor, weekReflexionEditor].forEach(attachNotes);
 
 // Give the cycle/habit/project note editors the same rendered backdrop as the
 // daily notes (checkboxes + **bold**), kept aligned + scroll-synced.
@@ -3221,7 +3317,7 @@ function makeRichFill(ta) {
   ta._richSync = sync;
   sync();
 }
-[cycleEditor, habitNotes, projectNotes].forEach(makeRichFill);
+[habitNotes, projectNotes].forEach(makeRichFill);
 const refreshRich = (ta) => ta._richSync && ta._richSync();
 
 // Bold/Italic/Strikethrough toolbar pinned to a note editor's corner
@@ -3255,7 +3351,7 @@ function addFormatToolbar(ta) {
   }
   wrap.appendChild(bar);
 }
-[editor, cycleEditor, habitNotes, projectNotes, weekEditor, reflexionEditor, weekReflexionEditor].forEach(addFormatToolbar);
+[editor, habitNotes, projectNotes, weekEditor, reflexionEditor, weekReflexionEditor].forEach(addFormatToolbar);
 
 // Auto-growing note editors (see autoGrowEditor & co.) have overflow:hidden —
 // the page scrolls instead of the box — which means the browser's built-in
@@ -3329,6 +3425,7 @@ const PALETTE_STATIC_COMMANDS = [
   { label: 'Go to Checklist', category: 'View', run: () => switchView('checklist') },
   { label: 'Go to Goals', category: 'View', run: () => switchView('goals') },
   { label: 'Go to Life', category: 'View', run: () => switchView('life') },
+  { label: 'Go to Learning Log', category: 'View', run: () => switchView('learninglog') },
 ];
 
 let paletteOpen = false;

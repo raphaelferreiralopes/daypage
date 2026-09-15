@@ -63,6 +63,8 @@ app.post(
 
 app.get('/api/recaps', h(async (req, res) => res.json(await db.listRecaps(req.supabase, req.userId))));
 
+app.get('/api/learnings', h(async (req, res) => res.json(await db.listAllLearnings(req.supabase, req.userId))));
+
 app.post(
   '/api/learnings/:date',
   h(async (req, res) => {

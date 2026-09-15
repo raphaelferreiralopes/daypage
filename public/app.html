@@ -57,6 +57,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18"/><path d="M8 2.5v4M16 2.5v4"/></svg>
         Life
       </button>
+      <button class="nav-tab" data-view="learninglog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        Learning Log
+      </button>
     </nav>
     <div id="sidebarBody">
       <div id="journalControls">
@@ -167,11 +171,11 @@
       </div>
 
       <div id="dayPageLearnings" class="day-page" hidden>
-        <div id="learningsHeader">
+        <div id="learningsHeader" class="boxlist-header">
           <h3>Learnings</h3>
-          <button id="addLearningBtn" title="Add another learning">+ Add learning</button>
+          <button id="addLearningBtn" class="boxlist-add-btn" title="Add another learning">+ Add learning</button>
         </div>
-        <div id="learningsList"></div>
+        <div id="learningsList" class="item-box-list"></div>
         <div id="learningsReadonlyNote" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Learnings can only be edited up to today.</div>
       </div>
 
@@ -265,7 +269,11 @@
       <!-- Rules page -->
       <div id="cyclePageRules" class="cycle-page">
         <div id="cycleMeta"></div>
-        <textarea id="cycleEditor" placeholder="Rules for this cycle…" spellcheck="true"></textarea>
+        <div id="prioritiesHeader" class="boxlist-header">
+          <h3>Priorities</h3>
+          <button id="addPriorityBtn" class="boxlist-add-btn" title="Add another priority">+ Add priority</button>
+        </div>
+        <div id="priorityList" class="item-box-list"></div>
         <div id="cycleReadonlyNote" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> This cycle has ended and is read-only.</div>
       </div>
 
@@ -356,6 +364,15 @@
       </div>
       <p class="view-hint">One sentence per day, written on the Recap tab in Journal. Click a day to read or write it.</p>
       <div id="lifeCalendar"></div>
+    </section>
+
+    <!-- LEARNING LOG (every day's Learnings, newest first) -->
+    <section id="learningLogView" class="view" hidden>
+      <div id="entryHeader">
+        <h2>Learning Log</h2>
+      </div>
+      <p class="view-hint">Everything from the Learnings tab, across every day, newest first. Click a day to open it.</p>
+      <div id="learningLogList"></div>
     </section>
   </main>
 
