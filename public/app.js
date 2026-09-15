@@ -115,16 +115,13 @@ const priorityList = document.getElementById('priorityList');
 const addPriorityBtn = document.getElementById('addPriorityBtn');
 const cycleReadonlyNote = document.getElementById('cycleReadonlyNote');
 let cyclePriorities = [{ title: '', content: '' }];
-const cycleProgress = document.getElementById('cycleProgress');
 const cycleTimeProgress = document.getElementById('cycleTimeProgress');
 const goalList = document.getElementById('goalList');
 const addGoalBtn = document.getElementById('addGoalBtn');
-const goalProgressList = document.getElementById('goalProgressList');
 const cycleTabs = document.querySelectorAll('.cycle-tab');
 const cyclePages = {
-  rules: document.getElementById('cyclePageRules'),
+  priorities: document.getElementById('cyclePagePriorities'),
   goals: document.getElementById('cyclePageGoals'),
-  progress: document.getElementById('cyclePageProgress'),
 };
 
 // yearly goals
@@ -177,7 +174,7 @@ let weekSaveTimer = null;
 let currentCycle = null; // currently open cycle id
 let cycleEditable = false;
 let cycleSaveTimer = null;
-let cyclePage = 'rules'; // active sub-page within a cycle
+let cyclePage = 'priorities'; // active sub-page within a cycle
 let dayPage = 'notes'; // active sub-tab within a day (time/habits/notes/reflexion/learnings)
 let learningsSaveTimer = null;
 let reflexionSaveTimer = null;
@@ -2341,54 +2338,24 @@ async function openCycle(id) {
   cycleReadonlyNote.hidden = c.editable;
   renderCycleMeta(c);
   renderCycleTimeProgress(c);
-  renderProgress(c);
-  renderProgressList(c);
   renderGoals(c);
   switchCyclePage(cyclePage);
   [...cycleList.children].forEach((li) => li.classList.toggle('active', li.dataset.id === id));
 }
 
-// switch between Rules / Goals / Progress within a cycle
+// switch between Priorities / Goals within a cycle
 function switchCyclePage(page) {
   cyclePage = page;
   for (const key of Object.keys(cyclePages)) cyclePages[key].hidden = key !== page;
   cycleTabs.forEach((t) => t.classList.toggle('active', t.dataset.page === page));
   // See switchDayPage's identical fix: a box built while this page was
   // display:none measures a 0 height and stays too short until re-measured.
-  if (page === 'rules') regrowPriorityBoxes();
-  if (page === 'rules' && cycleEditable) priorityList.querySelector('.item-box-input')?.focus();
+  if (page === 'priorities') regrowPriorityBoxes();
+  if (page === 'priorities' && cycleEditable) priorityList.querySelector('.item-box-input')?.focus();
 }
 cycleTabs.forEach((t) => (t.onclick = () => switchCyclePage(t.dataset.page)));
 
-// read-only progress bars on the Progress page
-function renderProgressList(c) {
-  goalProgressList.innerHTML = '';
-  if (!c.goals.length) {
-    goalProgressList.innerHTML = '<div class="pp-empty">No goals yet — add some on the “Goals” page.</div>';
-    return;
-  }
-  for (const g of c.goals) {
-    const unit = g.unit ? ' ' + esc(g.unit) : '';
-    const item = document.createElement('div');
-    item.className = 'pp-item';
-    item.innerHTML =
-      `<div class="pp-top"><span class="pp-name">${esc(g.label || g.habitName)}</span>` +
-      `<span><span class="pp-count">${g.current} / ${g.target}${unit}</span><span class="pp-pct">${g.pct}%</span></span></div>` +
-      `<div class="bar big${g.pct >= 100 ? ' done' : ''}"><span style="width:${g.pct}%"></span></div>`;
-    goalProgressList.appendChild(item);
-  }
-}
-
-// --- goals & progress -------------------------------------------------------
-function renderProgress(c) {
-  if (c.overallProgress == null) {
-    cycleProgress.innerHTML = '';
-    return;
-  }
-  cycleProgress.innerHTML =
-    `<div class="cycle-progress-label"><span>Cycle progress</span><span>${c.overallProgress}%</span></div>` +
-    `<div class="bar big${c.overallProgress >= 100 ? ' done' : ''}"><span style="width:${c.overallProgress}%"></span></div>`;
-}
+// --- goals -------------------------------------------------------------
 
 function renderGoals(c) {
   addGoalBtn.hidden = !c.editable;
