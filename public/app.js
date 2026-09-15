@@ -2415,7 +2415,7 @@ function renderGoals(c) {
     targetInp.title = 'Target';
     targetInp.onchange = () => editGoal(g.id, { target: targetInp.value }, c.id);
     top.appendChild(targetInp);
-    if (g.unit) top.insertAdjacentHTML('beforeend', `<span class="goal-unit">${esc(g.unit)}</span>`);
+    top.insertAdjacentHTML('beforeend', `<span class="goal-unit">${esc(g.unit || '')}</span>`);
 
     if (c.editable) {
       const del = document.createElement('button');
@@ -2592,7 +2592,7 @@ function renderYearGoalList(y) {
     targetInp.title = 'Target';
     targetInp.onchange = () => editYearGoal(g.id, { target: targetInp.value });
     top.appendChild(targetInp);
-    if (g.unit) top.insertAdjacentHTML('beforeend', `<span class="goal-unit">${esc(g.unit)}</span>`);
+    top.insertAdjacentHTML('beforeend', `<span class="goal-unit">${esc(g.unit || '')}</span>`);
 
     const del = document.createElement('button');
     del.className = 'goal-del';

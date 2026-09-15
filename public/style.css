@@ -767,18 +767,25 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 #goalList { display: flex; flex-direction: column; gap: 14px; }
 .goal-item .goal-top { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
 .goal-item .goal-top .goal-name { margin-right: 2px; }
-.goal-name { flex: 1; font-size: 14.5px; }
+.goal-name { flex: 1; min-width: 0; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* current / target — quiet and neutral so the progress bar underneath is
-   the one thing carrying color; numbers are tabular + right-aligned so
-   the target input lines up into a clean column down the list. */
-.goal-current { font-size: 13.5px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 28px; text-align: right; }
-.goal-sep { font-size: 13.5px; color: var(--faint); }
-.goal-unit { font-size: 12.5px; color: var(--muted); }
+   the one thing carrying color. Every column here (current, unit) has a
+   genuinely fixed width — not just min-width — and flex-shrink: 0, and the
+   unit span always renders even when empty, so the target input lands at
+   the same x-position on every row regardless of how long that row's
+   current value or unit happens to be. Only .goal-name (flex: 1) is what
+   actually flexes. */
+.goal-current {
+  flex: 0 0 34px; width: 34px; font-size: 13.5px; color: var(--muted);
+  font-variant-numeric: tabular-nums; text-align: right;
+}
+.goal-sep { flex: 0 0 auto; font-size: 13.5px; color: var(--faint); }
+.goal-unit { flex: 0 0 26px; width: 26px; font-size: 12.5px; color: var(--muted); }
 .goal-edit-target {
-  width: 38px; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 6px;
+  flex: 0 0 38px; width: 38px; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 6px;
   color: var(--text); padding: 2px 4px; font-size: 13px; text-align: center; font-variant-numeric: tabular-nums;
 }
-.goal-del { background: none; border: none; color: var(--faint); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 5px; }
+.goal-del { flex: 0 0 20px; background: none; border: none; color: var(--faint); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 5px; }
 .goal-del svg { width: 13px; height: 13px; }
 .goal-del:hover { color: var(--red); background: var(--red-soft); }
 
