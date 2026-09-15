@@ -1049,9 +1049,19 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 .cbk { color: var(--faint); font-weight: 600; cursor: pointer; }
 .cbk.on { color: var(--accent); }
 .cbtxt.done { color: var(--faint); text-decoration: line-through; }
-/* inline bold rendering on the backdrop */
-#editorBackdrop strong, .rich-backdrop strong { font-weight: 700; }
+/* inline bold/italic/strikethrough rendering on the backdrop */
+#editorBackdrop strong, #weekEditorBackdrop strong, #learningsBackdrop strong,
+#reflexionBackdrop strong, #weekReflexionBackdrop strong, .rich-backdrop strong { font-weight: 700; }
+#editorBackdrop em, #weekEditorBackdrop em, #learningsBackdrop em,
+#reflexionBackdrop em, #weekReflexionBackdrop em, .rich-backdrop em { font-style: italic; }
+#editorBackdrop del, #weekEditorBackdrop del, #learningsBackdrop del,
+#reflexionBackdrop del, #weekReflexionBackdrop del, .rich-backdrop del { text-decoration: line-through; color: var(--muted); }
 .md-mark { color: var(--faint); }
+/* Markdown markers (**, *, ~~) are only shown on the line the caret is
+   currently on (see highlightNotes/caretLineOf) — visibility, not display,
+   so the hidden marker still reserves its width and stays aligned with the
+   character it occupies in the invisible textarea underneath. */
+.md-mark.hide { visibility: hidden; }
 
 /* The textarea's own text is transparent (the backdrop renders it instead,
    see above) — without this, a selection just paints an empty highlight
@@ -1063,23 +1073,30 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
   background: var(--accent-soft);
 }
 
-/* Small "Bold" button pinned to a note editor's corner, dimmed until the
-   editor is hovered/focused so it doesn't compete with the text. */
+/* Small Bold/Italic/Strikethrough toolbar pinned to a note editor's corner,
+   dimmed until the editor is hovered/focused so it doesn't compete with the
+   text underneath it. */
 .note-wrap { position: relative; }
-.note-bold-btn {
+.note-fmt-toolbar {
   position: absolute; top: 6px; right: 6px; z-index: 2;
+  display: flex; gap: 2px;
+  opacity: 0; transition: opacity .15s ease;
+}
+.note-wrap:hover .note-fmt-toolbar, .note-wrap:focus-within .note-fmt-toolbar,
+.note-fmt-toolbar:focus-within {
+  opacity: 1;
+}
+.note-fmt-btn {
   width: 26px; height: 26px; padding: 0;
   display: flex; align-items: center; justify-content: center;
   font-size: 12.5px; font-weight: 700;
   background: var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
   color: var(--muted); cursor: pointer;
-  opacity: 0; transition: opacity .15s ease;
 }
-.note-wrap:hover .note-bold-btn, .note-wrap:focus-within .note-bold-btn, .note-bold-btn:focus-visible {
-  opacity: 1;
-}
-.note-bold-btn:hover { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent); }
-.note-wrap:has(textarea:disabled) .note-bold-btn { display: none; }
+.note-fmt-btn:hover { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent); }
+.note-fmt-italic { font-style: italic; }
+.note-fmt-strike { text-decoration: line-through; }
+.note-wrap:has(textarea:disabled) .note-fmt-toolbar { display: none; }
 
 /* generic rich-note overlay (cycle / habit / project notes) */
 .rich-wrap { position: relative; }

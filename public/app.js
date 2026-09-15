@@ -466,31 +466,59 @@ function autoGrowEditor() {
 
 // Render the daily notes onto the backdrop layer, styling checkbox lines so
 // checked items show in accent colour with a strike-through.
-// Inline Markdown: **bold**. Keeps the ** markers (dimmed) so character widths
-// stay aligned with the textarea underneath.
-function inlineMd(escaped) {
-  return escaped.replace(/\*\*(.+?)\*\*/g, '<span class="md-mark">**</span><strong>$1</strong><span class="md-mark">**</span>');
+// Inline Markdown: **bold**, *italic*, ~~strikethrough~~. The marker
+// characters always stay in the DOM — removing them would make the backdrop
+// shorter than the (invisible) textarea it sits on top of, which is what
+// keeps clicks and the caret lined up with what you see — but they're
+// visually hidden (visibility, not display: none, so the width they occupy
+// doesn't change) everywhere except the line the caret is currently on, via
+// the .hide class below. That's set per-line by highlightNotes.
+function mdMark(marker, show) {
+  return `<span class="md-mark${show ? '' : ' hide'}">${marker}</span>`;
+}
+function inlineMd(escaped, showMarks) {
+  return escaped.replace(
+    /(\*\*)(.+?)\*\*|(~~)(.+?)~~|(\*)(.+?)\*/g,
+    (whole, b, bInner, s, sInner, i, iInner) => {
+      if (b) return mdMark(b, showMarks) + `<strong>${bInner}</strong>` + mdMark(b, showMarks);
+      if (s) return mdMark(s, showMarks) + `<del>${sInner}</del>` + mdMark(s, showMarks);
+      return mdMark(i, showMarks) + `<em>${iInner}</em>` + mdMark(i, showMarks);
+    }
+  );
 }
 
-function highlightNotes(text) {
+function highlightNotes(text, caretLine = -1) {
   return text
     .split('\n')
-    .map((line) => {
+    .map((line, i) => {
+      const showMarks = i === caretLine;
       const m = line.match(/^(\s*)- \[( |x|X)\] (.*)$/);
-      if (!m) return inlineMd(esc(line));
+      if (!m) return inlineMd(esc(line), showMarks);
       const checked = m[2].toLowerCase() === 'x';
       const box = `- [${checked ? 'x' : ' '}]`;
-      return `${esc(m[1])}<span class="cbk${checked ? ' on' : ''}">${esc(box)}</span> <span class="cbtxt${checked ? ' done' : ''}">${inlineMd(esc(m[3]))}</span>`;
+      return `${esc(m[1])}<span class="cbk${checked ? ' on' : ''}">${esc(box)}</span> <span class="cbtxt${checked ? ' done' : ''}">${inlineMd(esc(m[3]), showMarks)}</span>`;
     })
     .join('\n');
 }
+
+// Which line (0-based) the caret is on, or -1 when the textarea isn't
+// focused — decides which line's markdown markers highlightNotes reveals.
+function caretLineOf(ta) {
+  if (document.activeElement !== ta) return -1;
+  return ta.value.slice(0, ta.selectionStart).split('\n').length - 1;
+}
+
 function renderEditorBackdrop() {
-  editorBackdrop.innerHTML = highlightNotes(editor.value);
+  editorBackdrop.innerHTML = highlightNotes(editor.value, caretLineOf(editor));
 }
 editor.addEventListener('input', renderEditorBackdrop);
+editor.addEventListener('click', renderEditorBackdrop);
+editor.addEventListener('keyup', renderEditorBackdrop);
+editor.addEventListener('focus', renderEditorBackdrop);
+editor.addEventListener('blur', renderEditorBackdrop);
 
 function renderWeekBackdrop() {
-  weekEditorBackdrop.innerHTML = highlightNotes(weekEditor.value);
+  weekEditorBackdrop.innerHTML = highlightNotes(weekEditor.value, caretLineOf(weekEditor));
 }
 function autoGrowWeekEditor() {
   weekEditor.style.height = 'auto';
@@ -499,9 +527,13 @@ function autoGrowWeekEditor() {
 }
 weekEditor.addEventListener('input', renderWeekBackdrop);
 weekEditor.addEventListener('input', autoGrowWeekEditor);
+weekEditor.addEventListener('click', renderWeekBackdrop);
+weekEditor.addEventListener('keyup', renderWeekBackdrop);
+weekEditor.addEventListener('focus', renderWeekBackdrop);
+weekEditor.addEventListener('blur', renderWeekBackdrop);
 
 function renderLearningsBackdrop() {
-  learningsBackdrop.innerHTML = highlightNotes(learningsEditor.value);
+  learningsBackdrop.innerHTML = highlightNotes(learningsEditor.value, caretLineOf(learningsEditor));
 }
 function autoGrowLearningsEditor() {
   learningsEditor.style.height = 'auto';
@@ -511,6 +543,10 @@ function autoGrowLearningsEditor() {
 learningsEditor.addEventListener('input', renderLearningsBackdrop);
 learningsEditor.addEventListener('input', autoGrowLearningsEditor);
 learningsEditor.addEventListener('input', scheduleLearningsSave);
+learningsEditor.addEventListener('click', renderLearningsBackdrop);
+learningsEditor.addEventListener('keyup', renderLearningsBackdrop);
+learningsEditor.addEventListener('focus', renderLearningsBackdrop);
+learningsEditor.addEventListener('blur', renderLearningsBackdrop);
 learningsEditor.addEventListener('blur', () => { clearTimeout(learningsSaveTimer); saveLearnings(); });
 
 function scheduleLearningsSave() {
@@ -536,7 +572,7 @@ async function saveLearnings() {
 }
 
 function renderReflexionBackdrop() {
-  reflexionBackdrop.innerHTML = highlightNotes(reflexionEditor.value);
+  reflexionBackdrop.innerHTML = highlightNotes(reflexionEditor.value, caretLineOf(reflexionEditor));
 }
 function autoGrowReflexionEditor() {
   reflexionEditor.style.height = 'auto';
@@ -546,6 +582,10 @@ function autoGrowReflexionEditor() {
 reflexionEditor.addEventListener('input', renderReflexionBackdrop);
 reflexionEditor.addEventListener('input', autoGrowReflexionEditor);
 reflexionEditor.addEventListener('input', scheduleReflexionSave);
+reflexionEditor.addEventListener('click', renderReflexionBackdrop);
+reflexionEditor.addEventListener('keyup', renderReflexionBackdrop);
+reflexionEditor.addEventListener('focus', renderReflexionBackdrop);
+reflexionEditor.addEventListener('blur', renderReflexionBackdrop);
 reflexionEditor.addEventListener('blur', () => { clearTimeout(reflexionSaveTimer); saveReflexion(); });
 
 function scheduleReflexionSave() {
@@ -1616,7 +1656,7 @@ weekEditor.addEventListener('input', scheduleWeekSave);
 weekEditor.addEventListener('blur', () => { clearTimeout(weekSaveTimer); flushWeekSave(); });
 
 function renderWeekReflexionBackdrop() {
-  weekReflexionBackdrop.innerHTML = highlightNotes(weekReflexionEditor.value);
+  weekReflexionBackdrop.innerHTML = highlightNotes(weekReflexionEditor.value, caretLineOf(weekReflexionEditor));
 }
 function autoGrowWeekReflexionEditor() {
   weekReflexionEditor.style.height = 'auto';
@@ -1626,6 +1666,10 @@ function autoGrowWeekReflexionEditor() {
 weekReflexionEditor.addEventListener('input', renderWeekReflexionBackdrop);
 weekReflexionEditor.addEventListener('input', autoGrowWeekReflexionEditor);
 weekReflexionEditor.addEventListener('input', scheduleWeekReflexionSave);
+weekReflexionEditor.addEventListener('click', renderWeekReflexionBackdrop);
+weekReflexionEditor.addEventListener('keyup', renderWeekReflexionBackdrop);
+weekReflexionEditor.addEventListener('focus', renderWeekReflexionBackdrop);
+weekReflexionEditor.addEventListener('blur', renderWeekReflexionBackdrop);
 weekReflexionEditor.addEventListener('blur', () => { clearTimeout(weekReflexionSaveTimer); flushWeekReflexionSave(); });
 
 function scheduleWeekReflexionSave() {
@@ -3063,6 +3107,9 @@ function attachNotes(ta) {
     } else if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'B')) {
       e.preventDefault();
       wrapSelection(ta, '**');
+    } else if ((e.metaKey || e.ctrlKey) && (e.key === 'i' || e.key === 'I')) {
+      e.preventDefault();
+      wrapSelection(ta, '*');
     }
   });
   ta.addEventListener('click', () => maybeToggleByClick(ta));
@@ -3085,10 +3132,14 @@ function makeRichFill(ta) {
     const s = getComputedStyle(ta);
     ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing',
       'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'].forEach((p) => { bd.style[p] = s[p]; });
-    bd.innerHTML = highlightNotes(ta.value);
+    bd.innerHTML = highlightNotes(ta.value, caretLineOf(ta));
     bd.scrollTop = ta.scrollTop;
   };
   ta.addEventListener('input', sync);
+  ta.addEventListener('click', sync);
+  ta.addEventListener('keyup', sync);
+  ta.addEventListener('focus', sync);
+  ta.addEventListener('blur', sync);
   ta.addEventListener('scroll', () => { bd.scrollTop = ta.scrollTop; });
   ta._richSync = sync;
   sync();
@@ -3096,27 +3147,38 @@ function makeRichFill(ta) {
 [cycleEditor, habitNotes, projectNotes].forEach(makeRichFill);
 const refreshRich = (ta) => ta._richSync && ta._richSync();
 
-// Small "B" button pinned to a note editor's corner (visible on hover/focus,
-// see .note-bold-btn in style.css) so bolding a selection doesn't require
-// knowing the ⌘B shortcut. Reuses the same wrapSelection() the shortcut uses.
-function addBoldButton(ta) {
+// Bold/Italic/Strikethrough toolbar pinned to a note editor's corner
+// (visible on hover/focus, see .note-fmt-toolbar in style.css) so formatting
+// a selection doesn't require knowing the ⌘B/⌘I shortcuts. Reuses the same
+// wrapSelection() the shortcuts use.
+const FORMAT_MARKS = [
+  { mark: '**', label: 'B', className: 'note-fmt-bold', title: 'Bold selection (⌘B)' },
+  { mark: '*', label: 'I', className: 'note-fmt-italic', title: 'Italic selection (⌘I)' },
+  { mark: '~~', label: 'S', className: 'note-fmt-strike', title: 'Strikethrough selection' },
+];
+function addFormatToolbar(ta) {
   const wrap = ta.parentElement;
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'note-bold-btn';
-  btn.title = 'Bold selection (⌘B)';
-  btn.textContent = 'B';
-  // Prevent the mousedown from stealing focus/collapsing the selection
-  // before the click handler gets to read it off the textarea.
-  btn.addEventListener('mousedown', (e) => e.preventDefault());
-  btn.addEventListener('click', () => {
-    if (ta.disabled) return;
-    ta.focus();
-    wrapSelection(ta, '**');
-  });
-  wrap.appendChild(btn);
+  const bar = document.createElement('div');
+  bar.className = 'note-fmt-toolbar';
+  for (const { mark, label, className, title } of FORMAT_MARKS) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `note-fmt-btn ${className}`;
+    btn.title = title;
+    btn.textContent = label;
+    // Prevent the mousedown from stealing focus/collapsing the selection
+    // before the click handler gets to read it off the textarea.
+    btn.addEventListener('mousedown', (e) => e.preventDefault());
+    btn.addEventListener('click', () => {
+      if (ta.disabled) return;
+      ta.focus();
+      wrapSelection(ta, mark);
+    });
+    bar.appendChild(btn);
+  }
+  wrap.appendChild(bar);
 }
-[editor, cycleEditor, habitNotes, projectNotes, weekEditor, learningsEditor, reflexionEditor, weekReflexionEditor].forEach(addBoldButton);
+[editor, cycleEditor, habitNotes, projectNotes, weekEditor, learningsEditor, reflexionEditor, weekReflexionEditor].forEach(addFormatToolbar);
 
 // Auto-growing note editors (see autoGrowEditor & co.) have overflow:hidden —
 // the page scrolls instead of the box — which means the browser's built-in
