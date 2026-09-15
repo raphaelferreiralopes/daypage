@@ -151,7 +151,7 @@
       </div>
 
       <div id="dayPageNotes" class="day-page" hidden>
-        <div id="editorWrap">
+        <div id="editorWrap" class="note-wrap">
           <div id="editorBackdrop" aria-hidden="true"></div>
           <textarea id="editor" placeholder="Write today's notes…" spellcheck="true"></textarea>
         </div>
@@ -159,7 +159,7 @@
       </div>
 
       <div id="dayPageReflexion" class="day-page" hidden>
-        <div id="reflexionWrap">
+        <div id="reflexionWrap" class="note-wrap">
           <div id="reflexionBackdrop" aria-hidden="true"></div>
           <textarea id="reflexionEditor" placeholder="What happened today? Reflect on it…" spellcheck="true"></textarea>
         </div>
@@ -167,7 +167,7 @@
       </div>
 
       <div id="dayPageLearnings" class="day-page" hidden>
-        <div id="learningsWrap">
+        <div id="learningsWrap" class="note-wrap">
           <div id="learningsBackdrop" aria-hidden="true"></div>
           <textarea id="learningsEditor" placeholder="What did you learn today?" spellcheck="true"></textarea>
         </div>
@@ -214,7 +214,7 @@
         </div>
 
         <div id="weekPageNotes" class="day-page">
-          <div id="weekEditorWrap">
+          <div id="weekEditorWrap" class="note-wrap">
             <div id="weekEditorBackdrop" aria-hidden="true"></div>
             <textarea id="weekEditor" placeholder="Write this week's notes…" spellcheck="true"></textarea>
           </div>
@@ -222,7 +222,7 @@
         </div>
 
         <div id="weekPageReflexion" class="day-page" hidden>
-          <div id="weekReflexionWrap">
+          <div id="weekReflexionWrap" class="note-wrap">
             <div id="weekReflexionBackdrop" aria-hidden="true"></div>
             <textarea id="weekReflexionEditor" placeholder="Reflect on this week…" spellcheck="true"></textarea>
           </div>
@@ -353,6 +353,7 @@
         </nav>
         <button id="lifeTodayBtn" class="ghost-mini" style="margin-left:auto">Today</button>
       </div>
+      <p class="view-hint">One sentence per day, written on the Recap tab in Journal. Click a day to read or write it.</p>
       <div id="lifeCalendar"></div>
     </section>
   </main>

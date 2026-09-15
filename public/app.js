@@ -461,6 +461,7 @@ dayTabs.forEach((t) => (t.onclick = () => switchDayPage(t.dataset.page)));
 function autoGrowEditor() {
   editor.style.height = 'auto';
   editor.style.height = editor.scrollHeight + 'px';
+  keepCaretInView(editor);
 }
 
 // Render the daily notes onto the backdrop layer, styling checkbox lines so
@@ -494,6 +495,7 @@ function renderWeekBackdrop() {
 function autoGrowWeekEditor() {
   weekEditor.style.height = 'auto';
   weekEditor.style.height = weekEditor.scrollHeight + 'px';
+  keepCaretInView(weekEditor);
 }
 weekEditor.addEventListener('input', renderWeekBackdrop);
 weekEditor.addEventListener('input', autoGrowWeekEditor);
@@ -504,6 +506,7 @@ function renderLearningsBackdrop() {
 function autoGrowLearningsEditor() {
   learningsEditor.style.height = 'auto';
   learningsEditor.style.height = learningsEditor.scrollHeight + 'px';
+  keepCaretInView(learningsEditor);
 }
 learningsEditor.addEventListener('input', renderLearningsBackdrop);
 learningsEditor.addEventListener('input', autoGrowLearningsEditor);
@@ -538,6 +541,7 @@ function renderReflexionBackdrop() {
 function autoGrowReflexionEditor() {
   reflexionEditor.style.height = 'auto';
   reflexionEditor.style.height = reflexionEditor.scrollHeight + 'px';
+  keepCaretInView(reflexionEditor);
 }
 reflexionEditor.addEventListener('input', renderReflexionBackdrop);
 reflexionEditor.addEventListener('input', autoGrowReflexionEditor);
@@ -1617,6 +1621,7 @@ function renderWeekReflexionBackdrop() {
 function autoGrowWeekReflexionEditor() {
   weekReflexionEditor.style.height = 'auto';
   weekReflexionEditor.style.height = weekReflexionEditor.scrollHeight + 'px';
+  keepCaretInView(weekReflexionEditor);
 }
 weekReflexionEditor.addEventListener('input', renderWeekReflexionBackdrop);
 weekReflexionEditor.addEventListener('input', autoGrowWeekReflexionEditor);
@@ -1784,7 +1789,7 @@ function renderChecklists(list) {
   checklistList.innerHTML = '';
   if (!list.length) {
     checklistList.innerHTML =
-      '<div class="habits-empty">No checklists yet. Click “+ New checklist” to add one, e.g. “Evening routine”.</div>';
+      '<div class="habits-empty">No checklists yet. Checklists reset every day — click “+ New checklist” to add one, e.g. “Evening routine”.</div>';
     return;
   }
   for (const cl of list) checklistList.appendChild(buildChecklistCard(cl));
@@ -1992,7 +1997,7 @@ async function loadCycles(selectId) {
   const cycles = await apiFetch('/api/cycles').then((r) => r.json());
   cycleList.innerHTML = '';
   if (!cycles.length) {
-    cycleList.innerHTML = '<li style="cursor:default;color:var(--muted)">No cycles yet. Click “+ New cycle”.</li>';
+    cycleList.innerHTML = '<li style="cursor:default;color:var(--muted)">No cycles yet. A cycle bundles a few weeks around its own rules and OKRs — click “+ New cycle” to start one.</li>';
     cycleName.textContent = '—';
     cycleBadge.textContent = '';
     cycleStatus.textContent = '';
@@ -2086,7 +2091,7 @@ function renderGoals(c) {
   addGoalBtn.hidden = !c.editable;
   goalList.innerHTML = '';
   if (!c.goals.length) {
-    goalList.innerHTML = '<div class="okr-habits"><span class="none">No goals yet. Add one like “Workout → 25”.</span></div>';
+    goalList.innerHTML = '<div class="okr-habits"><span class="none">No goals yet. Unlike the OKRs below, a goal tracks one number against a target — add one like “Workout → 25”.</span></div>';
     return;
   }
   for (const g of c.goals) {
@@ -2239,7 +2244,7 @@ function renderYearOverallProgress(y) {
 function renderYearGoalList(y) {
   yearGoalList.innerHTML = '';
   if (!y.goals.length) {
-    yearGoalList.innerHTML = '<div class="okr-habits"><span class="none">No goals yet for this year. Add one below.</span></div>';
+    yearGoalList.innerHTML = '<div class="okr-habits"><span class="none">No goals yet for this year. These are separate from your cycle OKRs — add a longer-term one below.</span></div>';
     return;
   }
   for (const g of y.goals) {
@@ -2414,7 +2419,7 @@ function renderOkrs(c) {
   addOkrBtn.hidden = !c.editable;
   okrList.innerHTML = '';
   if (!c.okrs.length) {
-    okrList.innerHTML = '<div class="okr-habits"><span class="none">No OKRs yet for this cycle.</span></div>';
+    okrList.innerHTML = '<div class="okr-habits"><span class="none">No OKRs yet for this cycle. An OKR is an Objective with a few Key Results — add one to track it here.</span></div>';
     return;
   }
   for (const o of c.okrs) {
@@ -2670,7 +2675,7 @@ async function loadOverview() {
   habitsCache = data.habits;
   overview.innerHTML = '';
   if (!data.habits.length) {
-    overview.innerHTML = '<div class="habits-empty">No habits yet. Click “+ Add habit” to create one.</div>';
+    overview.innerHTML = '<div class="habits-empty">No habits yet. Click “+ Add habit” to track a daily checkbox or number — optionally link it to a cycle OKR.</div>';
     return;
   }
   for (const [index, h] of data.habits.entries()) {
@@ -3064,13 +3069,13 @@ function attachNotes(ta) {
   ta.addEventListener('blur', () => setTimeout(() => { if (slashTa === ta) closeSlash(); }, 150));
 }
 
-[editor, cycleEditor, habitNotes, projectNotes, weekEditor].forEach(attachNotes);
+[editor, cycleEditor, habitNotes, projectNotes, weekEditor, learningsEditor, reflexionEditor, weekReflexionEditor].forEach(attachNotes);
 
 // Give the cycle/habit/project note editors the same rendered backdrop as the
 // daily notes (checkboxes + **bold**), kept aligned + scroll-synced.
 function makeRichFill(ta) {
   const wrap = document.createElement('div');
-  wrap.className = 'rich-wrap fill';
+  wrap.className = 'rich-wrap fill note-wrap';
   ta.parentNode.insertBefore(wrap, ta);
   const bd = document.createElement('div');
   bd.className = 'rich-backdrop';
@@ -3090,6 +3095,68 @@ function makeRichFill(ta) {
 }
 [cycleEditor, habitNotes, projectNotes].forEach(makeRichFill);
 const refreshRich = (ta) => ta._richSync && ta._richSync();
+
+// Small "B" button pinned to a note editor's corner (visible on hover/focus,
+// see .note-bold-btn in style.css) so bolding a selection doesn't require
+// knowing the ⌘B shortcut. Reuses the same wrapSelection() the shortcut uses.
+function addBoldButton(ta) {
+  const wrap = ta.parentElement;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'note-bold-btn';
+  btn.title = 'Bold selection (⌘B)';
+  btn.textContent = 'B';
+  // Prevent the mousedown from stealing focus/collapsing the selection
+  // before the click handler gets to read it off the textarea.
+  btn.addEventListener('mousedown', (e) => e.preventDefault());
+  btn.addEventListener('click', () => {
+    if (ta.disabled) return;
+    ta.focus();
+    wrapSelection(ta, '**');
+  });
+  wrap.appendChild(btn);
+}
+[editor, cycleEditor, habitNotes, projectNotes, weekEditor, learningsEditor, reflexionEditor, weekReflexionEditor].forEach(addBoldButton);
+
+// Auto-growing note editors (see autoGrowEditor & co.) have overflow:hidden —
+// the page scrolls instead of the box — which means the browser's built-in
+// "scroll to follow the caret" never kicks in. Without this, typing a new
+// line near the bottom of a long entry leaves the cursor below the fold.
+const mainEl = document.getElementById('main');
+function caretOffsetTop(ta) {
+  const mirror = document.createElement('div');
+  const cs = getComputedStyle(ta);
+  ['boxSizing', 'width', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+    'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+    'fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing',
+    'whiteSpace', 'overflowWrap'].forEach((p) => { mirror.style[p] = cs[p]; });
+  mirror.style.position = 'absolute';
+  mirror.style.visibility = 'hidden';
+  mirror.style.left = '-9999px';
+  mirror.style.top = '0';
+  mirror.style.height = 'auto';
+  mirror.appendChild(document.createTextNode(ta.value.slice(0, ta.selectionEnd)));
+  const marker = document.createElement('span');
+  marker.textContent = '​';
+  mirror.appendChild(marker);
+  document.body.appendChild(mirror);
+  try {
+    return marker.offsetTop;
+  } finally {
+    document.body.removeChild(mirror);
+  }
+}
+function keepCaretInView(ta) {
+  if (document.activeElement !== ta || !mainEl) return;
+  const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || 20;
+  const taTop = ta.getBoundingClientRect().top;
+  const caretTop = taTop + caretOffsetTop(ta);
+  const caretBottom = caretTop + lineHeight;
+  const viewRect = mainEl.getBoundingClientRect();
+  const margin = 16;
+  if (caretBottom > viewRect.bottom - margin) mainEl.scrollTop += caretBottom - viewRect.bottom + margin;
+  else if (caretTop < viewRect.top + margin) mainEl.scrollTop -= viewRect.top + margin - caretTop;
+}
 
 // theme switch — 'system' just removes the override and lets the
 // prefers-color-scheme media query (in style.css) decide, same as before
