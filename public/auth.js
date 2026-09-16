@@ -96,7 +96,11 @@ authForm.addEventListener('submit', async (e) => {
       const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
       if (error) throw error;
     } else if (mode === 'signup') {
-      const { error } = await supabaseClient.auth.signUp({ email, password });
+      const { error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${location.origin}/app` },
+      });
       if (error) throw error;
       authNotice.textContent = 'Account created — check your email to confirm it, then sign in.';
       authNotice.hidden = false;
