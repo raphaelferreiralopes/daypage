@@ -1339,6 +1339,15 @@ body.auth-locked #main { display: none; }
   #main { padding: 18px 16px 24px; }
   #entryHeader, #checklistHeader { flex-wrap: wrap; row-gap: 8px; margin-bottom: 18px; }
   #entryHeader h2, #checklistHeader h2, #entryDate { font-size: 19px; }
+  /* Always give the date its own full-width row instead of letting it
+     compete for space with the cycle chip / status text — otherwise it
+     can end up squeezed so tight it's easy to miss on a phone screen. */
+  #entryDate { flex: 1 1 100%; }
+  /* The collapsed-sidebar toggle is fixed at the very top-left corner of
+     the viewport and would otherwise sit right on top of (and clip) the
+     date text, since mobile always starts with the sidebar collapsed. */
+  body.sidebar-collapsed #entryHeader,
+  body.sidebar-collapsed #checklistHeader { padding-left: 28px; }
 
   #dayTabs, #weekTabs, #cycleTabs, #lifeModeTabs { flex-wrap: wrap; width: 100%; }
 
