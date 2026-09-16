@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light dark" />
-  <meta name="description" content="A private daily journal with notes, habits, cycles, time tracking, and a learning log — one page for today, one place for everything else." />
+  <meta name="description" content="A private daily journal with notes, habits, checklists, cycles, time tracking, yearly goals, and a learning log — one page for today, one place for everything else." />
   <title>Journal</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a23a2c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'/%3E%3Cpath d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23007aff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'/%3E%3Cpath d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/%3E%3C/svg%3E" />
   <script>
     // If a Supabase session is already sitting in localStorage, skip the landing
     // page entirely and go straight to /app — no flash of marketing content,
@@ -29,8 +29,6 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Archivo:wght@400;500;600&display=swap" />
   <link rel="stylesheet" href="/landing.css" />
 </head>
 <body>
@@ -44,98 +42,181 @@
 
   <main>
     <section id="lpHero">
-      <p id="heroDate"></p>
-      <h1>Today gets a page. So does every day after it.</h1>
-      <p class="lede">A private daily journal with habits, cycles, and time tracking built in — instead of five separate apps that don't talk to each other.</p>
-      <div id="lpHeroActions">
-        <a href="/app" class="btn-primary">Start today's page</a>
-        <a href="/app" class="btn-text">Sign in</a>
-      </div>
-
-      <div class="page-mock" aria-hidden="true">
-        <div class="page-mock-head">
-          <span class="page-mock-title" id="heroMockDate">Today</span>
-          <span class="page-mock-tag">Notes</span>
-        </div>
-        <div class="mock-line w82"></div>
-        <div class="mock-line w95"></div>
-        <div class="mock-line w40"><span class="mock-caret"></span></div>
-        <div class="mock-chiprow">
-          <span class="mock-chip">Habits <strong>3 / 4</strong></span>
-          <span class="mock-chip">Time <strong>2h 40m</strong></span>
-        </div>
-      </div>
-    </section>
-
-    <section class="entry" id="entryNotes">
-      <div class="entry-head"><h2>Notes</h2></div>
-      <p>Every day gets one page for whatever's on your mind. Once the day ends, the page locks — read-only, enforced by the server, not just hidden in the interface — so your history stays honest instead of getting quietly rewritten later.</p>
-      <div class="entry-visual stack">
-        <div class="stack-back" aria-hidden="true"></div>
-        <div class="stack-front page-mock">
-          <div class="page-mock-head">
-            <span class="page-mock-title">Tuesday</span>
+      <div class="wide hero-grid">
+        <div>
+          <p id="heroDate"></p>
+          <h1>Today gets a page. So does every day after it.</h1>
+          <p class="lede">A private daily journal with habits, checklists, cycles, time tracking, yearly goals, and a running learning log — instead of five separate apps that don't talk to each other.</p>
+          <div id="lpHeroActions">
+            <a href="/app" class="btn-primary">Start today's page</a>
+            <a href="/app" class="btn-text">Sign in</a>
           </div>
-          <div class="mock-line w70"></div>
-          <div class="mock-line w95"></div>
-          <div class="mock-line w55"><span class="mock-caret"></span></div>
         </div>
-        <p class="lock-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Monday's page — read-only now.</p>
-      </div>
-    </section>
-
-    <section class="entry" id="entryHabits">
-      <div class="entry-head"><h2>Habits</h2></div>
-      <p>Track a checkbox or a number, once a day. See the streak. Nothing to configure beyond that — this one's live, try it.</p>
-      <div class="entry-visual page-mock" id="habitMock">
-        <p class="habit-summary">Today · <strong>2 / 4</strong></p>
-        <button class="habit-row" data-checked="true"><span class="habit-box"></span> Workout <span class="habit-streak">12 days</span></button>
-        <button class="habit-row" data-checked="true"><span class="habit-box"></span> Morning pages <span class="habit-streak">34 days</span></button>
-        <button class="habit-row" data-checked="false"><span class="habit-box"></span> Deep work · 90 min <span class="habit-streak"></span></button>
-        <button class="habit-row" data-checked="false"><span class="habit-box"></span> Reading <span class="habit-streak"></span></button>
-      </div>
-    </section>
-
-    <section class="entry" id="entryCycles">
-      <div class="entry-head"><h2>Cycles</h2></div>
-      <p>Pick a stretch of weeks and name what matters in it. A few priorities, each with room to write — and goals that track themselves against a habit or your logged time, instead of a number you have to remember to update.</p>
-      <div class="entry-visual page-mock">
-        <div class="priority-row"><span class="priority-num">1</span> Ship the WHU application</div>
-        <div class="priority-row"><span class="priority-num">2</span> Keep the morning routine daily</div>
-        <div class="priority-row"><span class="priority-num">3</span> No screens after 10pm</div>
-        <div class="goal-block">
-          <div class="goal-top"><span>Deep work</span><strong>32h / 40h</strong></div>
-          <div class="time-track"><div class="time-fill" style="--w:80%"></div></div>
+        <div>
+          <div class="page-mock hero-mock" aria-hidden="true">
+            <nav class="mock-tabs">
+              <span class="mock-tab">Time</span>
+              <span class="mock-tab">Habits</span>
+              <span class="mock-tab active">Notes</span>
+              <span class="mock-tab">Reflexion</span>
+              <span class="mock-tab">Learnings</span>
+            </nav>
+            <div class="mock-body-pad">
+              <div class="page-mock-head">
+                <span class="page-mock-title" id="heroMockDate">Today</span>
+                <span class="page-mock-tag">Editable until midnight</span>
+              </div>
+              <div class="mock-line w82"></div>
+              <div class="mock-line w95"></div>
+              <div class="mock-line w40"><span class="mock-caret"></span></div>
+              <div class="mock-chiprow">
+                <span class="mock-chip">Habits <strong>3 / 4</strong></span>
+                <span class="mock-chip">Time <strong>2h 40m</strong></span>
+                <span class="mock-chip">Cycle <strong>WHU Q1</strong></span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="entry" id="entryTime">
-      <div class="entry-head"><h2>Time</h2></div>
-      <p>Start a timer per project, or log time by hand after the fact. Totals add themselves up for today, the week, and the cycle you're in.</p>
-      <div class="entry-visual page-mock">
-        <div class="timer-readout"><span class="timer-dot"></span> <span class="timer-time">24:18</span> <span class="timer-project">· Deep work</span></div>
-        <div class="time-row"><span class="time-label">Deep work</span><div class="time-track"><div class="time-fill" style="--w:82%"></div></div><span class="time-val">2h 40m</span></div>
-        <div class="time-row"><span class="time-label">Meetings</span><div class="time-track"><div class="time-fill" style="--w:46%"></div></div><span class="time-val">1h 30m</span></div>
-        <div class="time-row"><span class="time-label">Admin</span><div class="time-track"><div class="time-fill" style="--w:20%"></div></div><span class="time-val">40m</span></div>
+    <section class="split" id="entryNotes">
+      <div class="wide">
+        <div class="split-visual stack">
+          <div class="stack-back" aria-hidden="true"></div>
+          <div class="stack-front page-mock">
+            <div class="mock-body-pad">
+              <div class="page-mock-head">
+                <span class="page-mock-title">Tuesday</span>
+              </div>
+              <div class="mock-line w70"></div>
+              <div class="mock-line w95"></div>
+              <div class="mock-line w55"><span class="mock-caret"></span></div>
+            </div>
+          </div>
+          <p class="lock-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Monday's page — read-only now.</p>
+        </div>
+        <div class="split-text">
+          <span class="eyebrow">Notes</span>
+          <h2>Only today is yours to edit.</h2>
+          <p>Every day gets one page for whatever's on your mind. Once the day ends, the page locks — read-only, enforced by the server, not just hidden in the interface — so your history stays honest instead of getting quietly rewritten weeks later.</p>
+        </div>
       </div>
     </section>
 
-    <section class="entry" id="entryLearning">
-      <div class="entry-head"><h2>Learning Log</h2></div>
-      <p>Whatever you note down as a learning on any given day lands here too — every day's, in one running list, so a year of small realizations doesn't stay scattered across a year of pages.</p>
-      <div class="entry-visual page-mock">
-        <div class="ledger-row"><span class="ledger-date">Sep 14</span><span class="ledger-text">Shipped the habit streak view — small scope wins.</span></div>
-        <div class="ledger-row"><span class="ledger-date">Sep 9</span><span class="ledger-text">Three days of the morning routine sticking, finally.</span></div>
-        <div class="ledger-row"><span class="ledger-date">Aug 31</span><span class="ledger-text">Long walk clears more than a long meeting ever does.</span></div>
-        <div class="ledger-row empty"><span class="ledger-date">Aug 28</span><span class="ledger-text">— nothing logged —</span></div>
+    <section class="split reverse" id="entryHabits">
+      <div class="wide">
+        <div class="split-visual page-mock" id="habitMock">
+          <div class="mock-body-pad">
+            <p class="habit-summary">Today · <strong>2 / 4</strong></p>
+            <button class="habit-row" data-checked="true"><span class="habit-box"></span> Workout <span class="habit-streak">12 days</span></button>
+            <button class="habit-row" data-checked="true"><span class="habit-box"></span> Morning pages <span class="habit-streak">34 days</span></button>
+            <button class="habit-row" data-checked="false"><span class="habit-box"></span> Deep work · 90 min <span class="habit-streak"></span></button>
+            <button class="habit-row" data-checked="false"><span class="habit-box"></span> Reading <span class="habit-streak"></span></button>
+          </div>
+        </div>
+        <div class="split-text">
+          <span class="eyebrow">Habits</span>
+          <h2>Check it off. Watch the streak build.</h2>
+          <p>Track a checkbox or a number, once a day. Every habit's detail page has its own streak count and a 90-day heatmap, so a good run is something you can actually see. Nothing to configure beyond that — this one's live, try it.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="split" id="entryCycles">
+      <div class="wide">
+        <div class="split-visual page-mock">
+          <div class="mock-body-pad">
+            <div class="priority-row"><span class="priority-num">1</span> Ship the WHU application</div>
+            <div class="priority-row"><span class="priority-num">2</span> Keep the morning routine daily</div>
+            <div class="priority-row"><span class="priority-num">3</span> No screens after 10pm</div>
+            <div class="goal-block">
+              <div class="goal-top"><span>Deep work</span><strong>32h / 40h</strong></div>
+              <div class="time-track"><div class="time-fill" style="--w:80%"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="split-text">
+          <span class="eyebrow">Cycles</span>
+          <h2>Pick a stretch of weeks. Decide what matters in it.</h2>
+          <p>A cycle is a few weeks or months with its own named priorities, each with room to write — plus goals that track themselves against a habit or your logged time, instead of a number you have to remember to update by hand.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="split reverse" id="entryTime">
+      <div class="wide">
+        <div class="split-visual page-mock">
+          <div class="mock-body-pad">
+            <div class="timer-readout"><span class="timer-dot"></span> <span class="timer-time">24:18</span> <span class="timer-project">· Deep work</span></div>
+            <div class="time-row"><span class="time-label">Deep work</span><div class="time-track"><div class="time-fill" style="--w:82%"></div></div><span class="time-val">2h 40m</span></div>
+            <div class="time-row"><span class="time-label">Meetings</span><div class="time-track"><div class="time-fill" style="--w:46%"></div></div><span class="time-val">1h 30m</span></div>
+            <div class="time-row"><span class="time-label">Admin</span><div class="time-track"><div class="time-fill" style="--w:20%"></div></div><span class="time-val">40m</span></div>
+          </div>
+        </div>
+        <div class="split-text">
+          <span class="eyebrow">Time</span>
+          <h2>See where the day actually went.</h2>
+          <p>Start a timer per project, or log time by hand after the fact. Totals add themselves up for today, the week, and the cycle you're in — no separate spreadsheet to keep in sync.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="lpMosaic">
+      <div class="wide">
+        <div class="mosaic-head">
+          <h2>And the rest of your day, covered too.</h2>
+          <p>The four above are the core loop. These fill in the rest — all real, all part of the same account.</p>
+        </div>
+        <div class="mosaic-grid">
+          <div class="tile">
+            <h3>Reflect</h3>
+            <p>Recap for one sentence, Reflexion for however much more you want to say. Neither is required.</p>
+            <div class="reflect-row">
+              <span class="reflect-label">Recap</span>
+              <span class="reflect-text">Shipped the habit streak view. Small scope, real progress.</span>
+            </div>
+          </div>
+          <div class="tile">
+            <h3>Checklist</h3>
+            <p>Recurring daily lists for things that aren't really about a streak — a shutdown routine, what to pack.</p>
+            <button class="habit-row" data-checked="true" style="pointer-events:none"><span class="habit-box"></span> Lay out tomorrow's clothes</button>
+            <button class="habit-row" data-checked="false" style="pointer-events:none"><span class="habit-box"></span> Lights out by 11</button>
+          </div>
+          <div class="tile">
+            <h3>Goals</h3>
+            <p>Separate from a cycle's own goals — things aimed at over the whole year, plain yes/no or a tracked number.</p>
+            <div class="priority-row" style="border:none;padding-top:0"><span class="year-check"></span> Run a half marathon</div>
+            <div class="goal-block" style="margin-top:10px">
+              <div class="goal-top"><span>Books read</span><strong>14 / 20</strong></div>
+              <div class="time-track"><div class="time-fill" style="--w:70%"></div></div>
+            </div>
+          </div>
+          <div class="tile">
+            <h3>Life</h3>
+            <p>Every Recap, laid out on a calendar — a month or a full year at once. Click a day to open its page.</p>
+            <div class="life-grid" id="lifeMock" aria-hidden="true"></div>
+          </div>
+          <div class="tile">
+            <h3>Learning Log</h3>
+            <p>Whatever you note as a learning on any day lands here too — every day's, newest first, in one list.</p>
+            <div class="tile-ledger-row"><span class="tile-ledger-date">Sep 14</span><span class="tile-ledger-text">Shipped the streak view — small scope wins.</span></div>
+            <div class="tile-ledger-row"><span class="tile-ledger-date">Sep 9</span><span class="tile-ledger-text">Three days of the routine sticking, finally.</span></div>
+          </div>
+          <div class="tile">
+            <h3>Yours alone</h3>
+            <p>Every account is isolated at the database level — not just the interface. No shared journal, no admin view.</p>
+          </div>
+        </div>
       </div>
     </section>
 
     <section id="lpCta">
-      <h2>Start today's page.</h2>
-      <a href="/app" class="btn-primary">Get started — it's free</a>
-      <p class="cta-note">Every account is isolated at the database level. No shared journal, no admin view — nothing another user can ever see.</p>
+      <div class="wide">
+        <h2>Start today's page.</h2>
+        <a href="/app" class="btn-primary">Get started — it's free</a>
+        <p class="cta-note">Every account is isolated at the database level. No shared journal, no admin view — nothing another user can ever see.</p>
+      </div>
     </section>
   </main>
 

@@ -38,3 +38,16 @@ document.querySelectorAll('#habitMock .habit-row').forEach((row) => {
     }
   });
 });
+
+// Life mock: a plain month grid, a few days picked out as "has a recap" —
+// the same heatmap language the app itself uses for habit streaks.
+const lifeMock = document.getElementById('lifeMock');
+if (lifeMock) {
+  const daysInMonth = 30;
+  const noted = new Set([3, 7, 9, 14, 15, 18, 22, 26]);
+  for (let day = 1; day <= daysInMonth; day++) {
+    const cell = document.createElement('div');
+    cell.className = 'life-day' + (noted.has(day) ? ' has-note' : '');
+    lifeMock.appendChild(cell);
+  }
+}
