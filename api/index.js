@@ -234,6 +234,18 @@ app.post(
   })
 );
 
+// --- account (export + delete) ---------------------------------------------
+app.get(
+  '/api/export',
+  h(async (req, res) => {
+    const data = await db.exportUserData(req.supabase, req.userId);
+    res.setHeader('Content-Disposition', `attachment; filename="journal-export-${new Date().toISOString().slice(0, 10)}.json"`);
+    res.json(data);
+  })
+);
+
+app.delete('/api/account', h(async (req, res) => res.json(await db.deleteAccount(req.userId))));
+
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
 // Local (non-Vercel) dev convenience: `node api/index.js` serves the static

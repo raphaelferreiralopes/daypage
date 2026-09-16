@@ -18,7 +18,9 @@
         <div id="authNotice" hidden></div>
         <button id="authSubmit" type="submit" class="primary-btn">Sign in</button>
       </form>
+      <button id="authForgot" class="ghost-mini">Forgot password?</button>
       <button id="authToggleMode" class="ghost-mini">Need an account? Sign up</button>
+      <button id="authBack" class="ghost-mini" hidden>Back to sign in</button>
     </div>
   </div>
 
@@ -85,6 +87,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
       </button>
     </div>
+    <button id="accountBtn" title="Account">Account</button>
     <button id="logoutBtn" title="Log out">Log out</button>
   </aside>
 
@@ -307,7 +310,10 @@
       <div id="overview"></div>
       <div id="habitDetail" hidden>
         <div id="habitDetailStats"></div>
-        <textarea id="habitNotes" placeholder="Write anything about this habit…" spellcheck="true"></textarea>
+        <div id="habitNotesCard">
+          <div class="boxlist-header"><h3>Habit description</h3></div>
+          <textarea id="habitNotes" placeholder="Write anything about this habit…" spellcheck="true"></textarea>
+        </div>
       </div>
     </section>
 
@@ -379,6 +385,18 @@
         <button id="confirmCancel">Cancel</button>
         <button id="confirmOk" class="primary-btn"></button>
       </div>
+    </div>
+  </div>
+
+  <div id="accountOverlay" hidden>
+    <div id="accountDialog" role="dialog" aria-modal="true">
+      <h3>Account</h3>
+      <p>Your journal is yours — export everything as a JSON file any time, or permanently delete your account and all its data.</p>
+      <div id="accountActions">
+        <button id="accountExportBtn" class="ghost-mini">Export my data</button>
+        <button id="accountDeleteBtn" class="danger-btn">Delete my account</button>
+      </div>
+      <button id="accountClose" class="ghost-mini" style="margin-top:14px;width:100%">Close</button>
     </div>
   </div>
 

@@ -1511,10 +1511,12 @@ function todayISO() {
 
 // Reusable form dialog. Resolves to a {key: value} object, or null if cancelled.
 // fields: [{ key, label, type, options?, value?, placeholder?, inputMode?, required?, showIf? }]
-function openModal({ title, fields, submitLabel = 'Save' }) {
+function openModal({ title, fields, submitLabel = 'Save', danger = false }) {
   return new Promise((resolve) => {
     modalTitle.textContent = title;
     modalSubmit.textContent = submitLabel;
+    modalSubmit.classList.toggle('danger-btn', danger);
+    modalSubmit.classList.toggle('primary-btn', !danger);
     modalError.textContent = '';
     modalFields.innerHTML = '';
     const inputs = {};
@@ -1621,6 +1623,83 @@ function openConfirm({ title, message, confirmLabel = 'Delete', danger = true })
     confirmCancel.focus(); // destructive action isn't the default — Enter/Space needs an explicit Tab first
   });
 }
+
+// --- account: export your data / delete your account -----------------------
+const accountBtn = document.getElementById('accountBtn');
+const accountOverlay = document.getElementById('accountOverlay');
+const accountExportBtn = document.getElementById('accountExportBtn');
+const accountDeleteBtn = document.getElementById('accountDeleteBtn');
+const accountClose = document.getElementById('accountClose');
+
+function closeAccountDialog() {
+  accountOverlay.hidden = true;
+}
+accountBtn.onclick = () => { accountOverlay.hidden = false; };
+accountClose.onclick = closeAccountDialog;
+accountOverlay.onclick = (e) => { if (e.target === accountOverlay) closeAccountDialog(); };
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !accountOverlay.hidden) closeAccountDialog();
+});
+
+accountExportBtn.addEventListener('click', async () => {
+  accountExportBtn.disabled = true;
+  accountExportBtn.textContent = 'Exporting…';
+  try {
+    const res = await apiFetch('/api/export');
+    if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Export failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `journal-export-${todayISO()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    showToast(e.message || 'Could not export your data');
+  } finally {
+    accountExportBtn.disabled = false;
+    accountExportBtn.textContent = 'Export my data';
+  }
+});
+
+accountDeleteBtn.addEventListener('click', async () => {
+  const v = await openModal({
+    title: 'Delete your account',
+    submitLabel: 'Delete permanently',
+    danger: true,
+    fields: [
+      {
+        key: 'confirm',
+        label: 'This permanently erases your account and everything in it. Type DELETE to confirm.',
+        placeholder: 'DELETE',
+        required: true,
+      },
+    ],
+  });
+  if (!v) return;
+  if (v.confirm.trim() !== 'DELETE') {
+    showToast('Type DELETE exactly to confirm.');
+    return;
+  }
+  accountDeleteBtn.disabled = true;
+  try {
+    const res = await apiFetch('/api/account', { method: 'DELETE' });
+    if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Could not delete account');
+  } catch (e) {
+    showToast(e.message || 'Could not delete account');
+    accountDeleteBtn.disabled = false;
+    return;
+  }
+  // Account is already gone server-side at this point — a signOut() failure
+  // (e.g. its revoke call 404ing since the user no longer exists) shouldn't
+  // block navigating away.
+  try {
+    if (window.supabaseClient) await window.supabaseClient.auth.signOut();
+  } catch {}
+  location.href = '/';
+});
 
 // Lightweight non-blocking replacement for window.alert() — stacks in the
 // corner and self-dismisses instead of halting the UI for a click.

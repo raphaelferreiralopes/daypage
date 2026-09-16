@@ -378,6 +378,24 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 .danger-btn:hover { filter: brightness(1.08); }
 .danger-btn:active { transform: scale(0.97); }
 
+/* account dialog — same sheet treatment as #confirmOverlay */
+#accountOverlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+}
+#accountOverlay[hidden] { display: none; }
+#accountDialog {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 22px; width: 380px; max-width: calc(100vw - 32px);
+  box-shadow: var(--shadow-pop);
+}
+#accountDialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+#accountDialog p { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+#accountActions { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+#accountActions button { width: 100%; padding: 8px 0; }
+
 /* command palette (Cmd/Ctrl+K) — same blurred-overlay treatment as the
    modal/confirm dialogs, positioned near the top like Spotlight/Linear */
 #paletteOverlay {
@@ -539,14 +557,29 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 #habitNav li .type-dot { font-size: 11px; color: var(--faint); }
 #projectNav li.nav-child { padding-left: 26px; }
 
-/* habit / project detail page — a clean, blank writing surface */
+/* project detail page — a clean, blank writing surface */
 #habitDetail, #projectDetail { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-#habitNotes, #projectNotes {
+#projectNotes {
   flex: 1; width: 100%; resize: none;
   background: transparent; border: none; outline: none;
   color: transparent; caret-color: var(--text); font-size: 15px; line-height: 1.7; letter-spacing: -0.003em;
 }
-#habitNotes::placeholder, #projectNotes::placeholder { color: var(--faint); }
+#projectNotes::placeholder { color: var(--faint); }
+
+/* habit detail page — the description lives in its own card, like the
+   Habits/Goals sections, instead of floating directly on the page. */
+#habitNotesCard {
+  flex: 1; display: flex; flex-direction: column; min-height: 0;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 18px; background: var(--panel); box-shadow: var(--shadow-sm);
+}
+#habitNotesCard .boxlist-header { flex-shrink: 0; margin-bottom: 10px; }
+#habitNotes {
+  flex: 1; width: 100%; resize: none;
+  background: transparent; border: none; outline: none;
+  color: transparent; caret-color: var(--text); font-size: 15px; line-height: 1.7; letter-spacing: -0.003em;
+}
+#habitNotes::placeholder { color: var(--faint); }
 
 /* habit detail: current/longest streak + completion rate, and a compact
    90-day heatmap (GitHub-contributions style) above the notes */
@@ -1238,11 +1271,13 @@ body.auth-locked #main { display: none; }
 #authError { color: var(--red); font-size: 12.5px; min-height: 16px; }
 #authNotice { color: var(--muted); font-size: 12.5px; }
 #authNotice[hidden] { display: none; }
-#authToggleMode {
+#authToggleMode, #authForgot, #authBack {
   background: none; border: none; color: var(--muted); font-size: 12.5px;
-  cursor: pointer; margin-top: 14px; width: 100%; text-align: center;
+  cursor: pointer; width: 100%; text-align: center;
 }
-#authToggleMode:hover { color: var(--accent); }
+#authForgot, #authBack { margin-top: 14px; }
+#authForgot ~ #authToggleMode { margin-top: 8px; }
+#authToggleMode:hover, #authForgot:hover, #authBack:hover { color: var(--accent); }
 
 /* theme switch — segmented control, same treatment as #cycleTabs/#dayTabs */
 #themeSwitch {
@@ -1259,11 +1294,14 @@ body.auth-locked #main { display: none; }
 .theme-opt:hover { color: var(--text); }
 .theme-opt.active { color: var(--text); background: var(--panel); box-shadow: var(--shadow-sm); }
 
-#logoutBtn {
-  margin: 8px 12px 14px; padding: 7px 0; border: 1px solid var(--border-strong);
+#accountBtn, #logoutBtn {
+  padding: 7px 0; border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm); background: transparent; color: var(--muted);
   font-size: 12.5px; cursor: pointer;
 }
+#accountBtn { margin: 8px 12px 0; }
+#logoutBtn { margin: 6px 12px 14px; }
+#accountBtn:hover { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent); }
 #logoutBtn:hover { background: var(--red-soft); border-color: var(--red-soft); color: var(--red); }
 
 /* ============================================================
