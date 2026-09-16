@@ -37,7 +37,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       Journal
     </div>
-    <a href="/app" id="lpNavSignIn">Sign in</a>
+    <div id="lpNavActions">
+      <a href="/app" id="lpNavSignIn">Log in</a>
+      <a href="/app?mode=signup" id="lpNavSignUp" class="btn-primary">Sign up</a>
+    </div>
   </header>
 
   <main>
@@ -48,8 +51,8 @@
           <h1>Today gets a page. So does every day after it.</h1>
           <p class="lede">A private daily journal with habits, checklists, cycles, time tracking, yearly goals, and a running learning log — instead of five separate apps that don't talk to each other.</p>
           <div id="lpHeroActions">
-            <a href="/app" class="btn-primary">Start today's page</a>
-            <a href="/app" class="btn-text">Sign in</a>
+            <a href="/app?mode=signup" class="btn-primary">Start today's page</a>
+            <a href="/app" class="btn-text">Log in</a>
           </div>
         </div>
         <div>
@@ -214,7 +217,7 @@
     <section id="lpCta">
       <div class="wide">
         <h2>Start today's page.</h2>
-        <a href="/app" class="btn-primary">Get started — it's free</a>
+        <a href="/app?mode=signup" class="btn-primary">Get started — it's free</a>
         <p class="cta-note">Every account is isolated at the database level. No shared journal, no admin view — nothing another user can ever see.</p>
       </div>
     </section>
@@ -222,7 +225,7 @@
 
   <footer id="lpFooter">
     <span>Journal</span>
-    <a href="/app">Sign in</a>
+    <a href="/app">Log in</a>
   </footer>
 
   <script src="/landing.js"></script>

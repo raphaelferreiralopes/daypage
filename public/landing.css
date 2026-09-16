@@ -81,8 +81,10 @@ a:focus-visible, button:focus-visible {
 }
 #lpBrand { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
 #lpBrand svg { width: 18px; height: 18px; color: var(--accent); }
+#lpNavActions { display: flex; align-items: center; gap: 14px; }
 #lpNavSignIn { font-size: 13.5px; font-weight: 600; color: var(--muted); }
 #lpNavSignIn:hover { color: var(--text); }
+#lpNavSignUp { padding: 7px 16px; font-size: 13.5px; }
 
 /* --- hero: big, asymmetric, the screen's full width ------------------- */
 #lpHero { padding: 56px 0 80px; }

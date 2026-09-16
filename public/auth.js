@@ -159,7 +159,12 @@ let isRecovery = /type=recovery/.test(location.hash) || new URLSearchParams(loca
 
   supabaseClient = window.supabase.createClient(cfg.url, cfg.anonKey);
   window.supabaseClient = supabaseClient;
-  setMode(isRecovery ? 'reset' : 'signin');
+  // Landing page's "Sign up" vs "Log in" buttons link to /app?mode=signup
+  // vs plain /app, so each opens straight to the right form instead of
+  // both dropping onto sign-in and making "Sign up" clickers hunt for the
+  // toggle.
+  const startInSignup = new URLSearchParams(location.search).get('mode') === 'signup';
+  setMode(isRecovery ? 'reset' : startInSignup ? 'signup' : 'signin');
 
   supabaseClient.auth.onAuthStateChange((event, session) => {
     if (event === 'PASSWORD_RECOVERY') {
