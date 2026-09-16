@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light dark" />
-  <meta name="description" content="A private daily journal with notes, time tracking, habits, cycles, and goals — one place for your day." />
+  <meta name="description" content="A private daily journal with notes, habits, cycles, time tracking, and a learning log — one page for today, one place for everything else." />
   <title>Journal</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a23a2c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'/%3E%3Cpath d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/%3E%3C/svg%3E" />
   <script>
     // If a Supabase session is already sitting in localStorage, skip the landing
     // page entirely and go straight to /app — no flash of marketing content,
@@ -28,14 +29,11 @@
       } catch (e) {}
     })();
   </script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Archivo:wght@400;500;600&display=swap" />
   <link rel="stylesheet" href="/landing.css" />
 </head>
 <body>
-  <div class="blob-field" aria-hidden="true">
-    <div class="blob blob-a"></div>
-    <div class="blob blob-b"></div>
-  </div>
-
   <header id="lpHeader">
     <div id="lpBrand">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -46,178 +44,98 @@
 
   <main>
     <section id="lpHero">
-      <span class="eyebrow">Your day, structured</span>
-      <h1>One page for today.<br>One place for <span class="gradient-text">everything else.</span></h1>
-      <p>Notes, time tracking, habits, cycles, and goals — instead of five separate apps pretending to talk to each other.</p>
+      <p id="heroDate"></p>
+      <h1>Today gets a page. So does every day after it.</h1>
+      <p class="lede">A private daily journal with habits, cycles, and time tracking built in — instead of five separate apps that don't talk to each other.</p>
       <div id="lpHeroActions">
-        <a href="/app" class="lp-btn lp-btn-primary">Get started — it's free</a>
-        <a href="/app" class="lp-btn lp-btn-ghost">Sign in</a>
+        <a href="/app" class="btn-primary">Start today's page</a>
+        <a href="/app" class="btn-text">Sign in</a>
       </div>
 
-      <div id="lpHeroMock" aria-hidden="true">
-        <div class="mock-window">
-          <div class="mock-titlebar">
-            <span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span>
-            <span class="mock-titletext">Wed, Aug 26</span>
-          </div>
-          <div class="mock-body">
-            <div class="mock-sidebar">
-              <div class="mock-navitem active"></div>
-              <div class="mock-navitem"></div>
-              <div class="mock-navitem"></div>
-              <div class="mock-navitem"></div>
-            </div>
-            <div class="mock-content">
-              <div class="mock-line w70"></div>
-              <div class="mock-line w90"></div>
-              <div class="mock-line w40"></div>
-              <div class="mock-chip-row">
-                <span class="mock-chip">🔥 12</span>
-                <span class="mock-chip">4h 12m</span>
-              </div>
-            </div>
-          </div>
+      <div class="page-mock" aria-hidden="true">
+        <div class="page-mock-head">
+          <span class="page-mock-title" id="heroMockDate">Today</span>
+          <span class="page-mock-tag">Notes</span>
+        </div>
+        <div class="mock-line w82"></div>
+        <div class="mock-line w95"></div>
+        <div class="mock-line w40"><span class="mock-caret"></span></div>
+        <div class="mock-chiprow">
+          <span class="mock-chip">Habits <strong>3 / 4</strong></span>
+          <span class="mock-chip">Time <strong>2h 40m</strong></span>
         </div>
       </div>
     </section>
 
-    <section class="feature-row reveal" id="featNotes">
-      <div class="feature-text">
-        <span class="eyebrow">Notes</span>
-        <h2>A blank page for today — and only today.</h2>
-        <p>Every day gets its own page for freeform notes. Once a day passes, it locks: read-only, so your history stays honest instead of getting quietly rewritten.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="mock-card stack-back">
-          <div class="lock-chip">🔒 Read-only</div>
-        </div>
-        <div class="mock-card stack-front">
-          <div class="mock-card-head">
-            <span class="mock-date">Today · Aug 26</span>
+    <section class="entry" id="entryNotes">
+      <div class="entry-head"><h2>Notes</h2></div>
+      <p>Every day gets one page for whatever's on your mind. Once the day ends, the page locks — read-only, enforced by the server, not just hidden in the interface — so your history stays honest instead of getting quietly rewritten later.</p>
+      <div class="entry-visual stack">
+        <div class="stack-back" aria-hidden="true"></div>
+        <div class="stack-front page-mock">
+          <div class="page-mock-head">
+            <span class="page-mock-title">Tuesday</span>
           </div>
-          <div class="mock-line w80"></div>
+          <div class="mock-line w70"></div>
           <div class="mock-line w95"></div>
-          <div class="mock-line w60"></div>
-          <div class="mock-caret"></div>
+          <div class="mock-line w55"><span class="mock-caret"></span></div>
+        </div>
+        <p class="lock-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Monday's page — read-only now.</p>
+      </div>
+    </section>
+
+    <section class="entry" id="entryHabits">
+      <div class="entry-head"><h2>Habits</h2></div>
+      <p>Track a checkbox or a number, once a day. See the streak. Nothing to configure beyond that — this one's live, try it.</p>
+      <div class="entry-visual page-mock" id="habitMock">
+        <p class="habit-summary">Today · <strong>2 / 4</strong></p>
+        <button class="habit-row" data-checked="true"><span class="habit-box"></span> Workout <span class="habit-streak">12 days</span></button>
+        <button class="habit-row" data-checked="true"><span class="habit-box"></span> Morning pages <span class="habit-streak">34 days</span></button>
+        <button class="habit-row" data-checked="false"><span class="habit-box"></span> Deep work · 90 min <span class="habit-streak"></span></button>
+        <button class="habit-row" data-checked="false"><span class="habit-box"></span> Reading <span class="habit-streak"></span></button>
+      </div>
+    </section>
+
+    <section class="entry" id="entryCycles">
+      <div class="entry-head"><h2>Cycles</h2></div>
+      <p>Pick a stretch of weeks and name what matters in it. A few priorities, each with room to write — and goals that track themselves against a habit or your logged time, instead of a number you have to remember to update.</p>
+      <div class="entry-visual page-mock">
+        <div class="priority-row"><span class="priority-num">1</span> Ship the WHU application</div>
+        <div class="priority-row"><span class="priority-num">2</span> Keep the morning routine daily</div>
+        <div class="priority-row"><span class="priority-num">3</span> No screens after 10pm</div>
+        <div class="goal-block">
+          <div class="goal-top"><span>Deep work</span><strong>32h / 40h</strong></div>
+          <div class="time-track"><div class="time-fill" style="--w:80%"></div></div>
         </div>
       </div>
     </section>
 
-    <section class="feature-row reverse reveal" id="featTime">
-      <div class="feature-text">
-        <span class="eyebrow">Time</span>
-        <h2>See where your day actually went.</h2>
-        <p>Start a one-click timer per project, or log time by hand afterwards. Totals roll up automatically for today, the last 7 days, and the current cycle.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="mock-card">
-          <div class="timer-pill"><span class="timer-dot"></span> 24:18 · Deep Work</div>
-          <div class="bar-row"><span class="bar-label">Deep Work</span><div class="bar-track"><div class="bar-fill" style="--w:82%"></div></div><span class="bar-val">2h 40m</span></div>
-          <div class="bar-row"><span class="bar-label">Meetings</span><div class="bar-track"><div class="bar-fill alt" style="--w:46%"></div></div><span class="bar-val">1h 30m</span></div>
-          <div class="bar-row"><span class="bar-label">Admin</span><div class="bar-track"><div class="bar-fill" style="--w:20%"></div></div><span class="bar-val">40m</span></div>
-        </div>
+    <section class="entry" id="entryTime">
+      <div class="entry-head"><h2>Time</h2></div>
+      <p>Start a timer per project, or log time by hand after the fact. Totals add themselves up for today, the week, and the cycle you're in.</p>
+      <div class="entry-visual page-mock">
+        <div class="timer-readout"><span class="timer-dot"></span> <span class="timer-time">24:18</span> <span class="timer-project">· Deep work</span></div>
+        <div class="time-row"><span class="time-label">Deep work</span><div class="time-track"><div class="time-fill" style="--w:82%"></div></div><span class="time-val">2h 40m</span></div>
+        <div class="time-row"><span class="time-label">Meetings</span><div class="time-track"><div class="time-fill" style="--w:46%"></div></div><span class="time-val">1h 30m</span></div>
+        <div class="time-row"><span class="time-label">Admin</span><div class="time-track"><div class="time-fill" style="--w:20%"></div></div><span class="time-val">40m</span></div>
       </div>
     </section>
 
-    <section class="feature-row reveal" id="featJournal">
-      <div class="feature-text">
-        <span class="eyebrow">Reflect</span>
-        <h2>Three questions worth asking every evening.</h2>
-        <p>A one-sentence recap of what happened, a longer reflexion, and a running learning log — so what you notice today doesn't quietly evaporate by next week.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="mock-card">
-          <div class="reflect-row">
-            <span class="reflect-icon">✳️</span>
-            <div><span class="reflect-label">Recap</span><div class="mock-line w85 tight"></div></div>
-          </div>
-          <div class="reflect-row">
-            <span class="reflect-icon">🌀</span>
-            <div><span class="reflect-label">Reflexion</span><div class="mock-line w95 tight"></div><div class="mock-line w70 tight"></div></div>
-          </div>
-          <div class="reflect-row">
-            <span class="reflect-icon">📎</span>
-            <div><span class="reflect-label">Learning</span><div class="mock-line w60 tight"></div></div>
-          </div>
-        </div>
+    <section class="entry" id="entryLearning">
+      <div class="entry-head"><h2>Learning Log</h2></div>
+      <p>Whatever you note down as a learning on any given day lands here too — every day's, in one running list, so a year of small realizations doesn't stay scattered across a year of pages.</p>
+      <div class="entry-visual page-mock">
+        <div class="ledger-row"><span class="ledger-date">Sep 14</span><span class="ledger-text">Shipped the habit streak view — small scope wins.</span></div>
+        <div class="ledger-row"><span class="ledger-date">Sep 9</span><span class="ledger-text">Three days of the morning routine sticking, finally.</span></div>
+        <div class="ledger-row"><span class="ledger-date">Aug 31</span><span class="ledger-text">Long walk clears more than a long meeting ever does.</span></div>
+        <div class="ledger-row empty"><span class="ledger-date">Aug 28</span><span class="ledger-text">— nothing logged —</span></div>
       </div>
     </section>
 
-    <section class="feature-row reverse reveal" id="featHabits">
-      <div class="feature-text">
-        <span class="eyebrow">Habits</span>
-        <h2>Check it off. Watch the streak grow.</h2>
-        <p>Track check-ins or numeric values, see your current streak at a glance, and link a habit straight to the cycle goal it's meant to move. Try it — the checklist below is live.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="mock-card" id="habitMock">
-          <div class="habit-summary">Today · <strong>2 / 4</strong></div>
-          <button class="habit-row" data-checked="true"><span class="habit-check"></span> Workout <span class="habit-streak">🔥 12</span></button>
-          <button class="habit-row" data-checked="true"><span class="habit-check"></span> Morning routine <span class="habit-streak">🔥 34</span></button>
-          <button class="habit-row" data-checked="false"><span class="habit-check"></span> Deep work · 90 min <span class="habit-streak"></span></button>
-          <button class="habit-row" data-checked="false"><span class="habit-check"></span> Reading <span class="habit-streak"></span></button>
-        </div>
-      </div>
-    </section>
-
-    <section class="feature-row reveal" id="featCycles">
-      <div class="feature-text">
-        <span class="eyebrow">Cycles</span>
-        <h2>Pick a season. Decide what matters in it.</h2>
-        <p>A cycle is a time-boxed stretch — a few weeks or a couple of months — with its own objectives and priorities, so "someday" goals finally get a deadline attached.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="mock-card">
-          <div class="cycle-label">WHU Q1 <span class="cycle-badge">Current</span></div>
-          <div class="cycle-track">
-            <div class="cycle-segment" style="--l:32%; --w:38%"></div>
-          </div>
-          <div class="cycle-dates"><span>Aug 31</span><span>Nov 1</span></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="feature-row reverse reveal" id="featGoals">
-      <div class="feature-text">
-        <span class="eyebrow">Goals</span>
-        <h2>Measured automatically, not by memory.</h2>
-        <p>Every goal targets either a habit or tracked project time. Progress updates itself from what you've already logged — no separate check-in to remember.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="mock-card goals-card">
-          <div class="goal-item">
-            <div class="goal-top"><span>Workout</span><span>12 / 20</span></div>
-            <div class="bar-track"><div class="bar-fill" style="--w:60%"></div></div>
-          </div>
-          <div class="goal-ring-wrap">
-            <svg class="goal-ring" viewBox="0 0 80 80">
-              <circle class="ring-bg" cx="40" cy="40" r="34"/>
-              <circle class="ring-fg" cx="40" cy="40" r="34"/>
-            </svg>
-            <div class="goal-ring-label">Deep Work<br><strong>32h / 40h</strong></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="feature-row reveal" id="featLife">
-      <div class="feature-text">
-        <span class="eyebrow">Life</span>
-        <h2>A year, at a glance.</h2>
-        <p>Every day's one-line recap laid out on a calendar. Hover a day to read what happened — a whole season, legible in one screen.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="mock-card">
-          <div class="cal-head">August</div>
-          <div class="cal-grid" id="lifeCal"></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="lpCta" class="reveal">
+    <section id="lpCta">
       <h2>Start today's page.</h2>
-      <a href="/app" class="lp-btn lp-btn-primary">Get started — it's free</a>
-      <p class="lp-cta-note">Every account is isolated at the database level. No shared journal, no admin view — nothing another user can ever see.</p>
+      <a href="/app" class="btn-primary">Get started — it's free</a>
+      <p class="cta-note">Every account is isolated at the database level. No shared journal, no admin view — nothing another user can ever see.</p>
     </section>
   </main>
 
