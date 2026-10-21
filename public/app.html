@@ -63,6 +63,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
         Learning Log
       </button>
+      <button class="nav-tab" data-view="reflexionen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Reflexionen
+      </button>
     </nav>
     <div id="sidebarBody">
       <div id="journalControls">
@@ -362,6 +366,16 @@
       </div>
       <p class="view-hint">Everything from the Learnings tab, across every day, newest first. Click a day to open it.</p>
       <div id="learningLogList"></div>
+    </section>
+
+    <!-- REFLEXIONEN (freeform notes that don't fit any other tab) -->
+    <section id="reflexionenView" class="view" hidden>
+      <div id="reflexionenHeader">
+        <h2>Reflexionen</h2>
+        <button id="addReflexionBtn" class="primary-btn" style="margin-left:auto">+ Neue Reflexion</button>
+      </div>
+      <p class="view-hint">Freier Platz für Gedanken, die sonst nirgendwo reinpassen.</p>
+      <div id="reflexionenList"></div>
     </section>
   </main>
 

@@ -51,6 +51,9 @@ const lifeLabel = document.getElementById('lifeLabel');
 const lifeCalendar = document.getElementById('lifeCalendar');
 const learningLogView = document.getElementById('learningLogView');
 const learningLogList = document.getElementById('learningLogList');
+const reflexionenView = document.getElementById('reflexionenView');
+const reflexionenList = document.getElementById('reflexionenList');
+const addReflexionBtn = document.getElementById('addReflexionBtn');
 const lifePrev = document.getElementById('lifePrev');
 const lifeNext = document.getElementById('lifeNext');
 const lifeTodayBtn = document.getElementById('lifeTodayBtn');
@@ -1993,6 +1996,7 @@ async function switchView(next) {
   lifeView.hidden = next !== 'life';
   goalsView.hidden = next !== 'goals';
   learningLogView.hidden = next !== 'learninglog';
+  reflexionenView.hidden = next !== 'reflexionen';
   // sidebar contents per view
   journalControls.hidden = next !== 'journal';
   dayList.hidden = next !== 'journal';
@@ -2008,6 +2012,7 @@ async function switchView(next) {
   if (next === 'life') await openLife();
   if (next === 'goals') await loadYearGoals();
   if (next === 'learninglog') await loadLearningLog();
+  if (next === 'reflexionen') await loadReflexionen();
 }
 navTabs.forEach((t) => (t.onclick = () => switchView(t.dataset.view)));
 
@@ -2367,6 +2372,97 @@ async function reorderChecklistItems(checklistId, itemIds) {
     body: JSON.stringify({ itemIds }),
   });
   if (!res.ok) loadChecklists(); // fell out of sync with the server — rebuild from truth
+}
+
+// --- reflexionen (freeform notes that don't fit any other tab) -------------
+let reflexionSaveTimers = new Map();
+
+async function loadReflexionen() {
+  const list = await apiFetch('/api/reflections').then((r) => r.json());
+  renderReflexionen(list);
+}
+
+function renderReflexionen(list) {
+  reflexionenList.innerHTML = '';
+  if (!list.length) {
+    reflexionenList.innerHTML =
+      '<div class="habits-empty">Noch keine Reflexionen. Klick auf „+ Neue Reflexion“, um frei etwas aufzuschreiben.</div>';
+    return;
+  }
+  for (const r of list) reflexionenList.appendChild(buildReflexionCard(r));
+}
+
+function buildReflexionCard(r) {
+  const card = document.createElement('div');
+  card.className = 'ov-card reflexion-card';
+
+  const top = document.createElement('div');
+  top.className = 'ov-top';
+  const meta = document.createElement('span');
+  meta.className = 'reflexion-meta';
+  meta.textContent = new Date(r.created_at).toLocaleString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+  top.appendChild(meta);
+  top.insertAdjacentHTML('beforeend', '<span class="ov-spacer"></span>');
+  const del = document.createElement('button');
+  del.className = 'ov-del';
+  del.innerHTML = TRASH_SVG;
+  del.title = 'Reflexion löschen';
+  del.onclick = () => removeReflexion(r.id, card);
+  top.appendChild(del);
+  card.appendChild(top);
+
+  const ta = document.createElement('textarea');
+  ta.className = 'reflexion-textarea';
+  ta.value = r.content || '';
+  ta.placeholder = 'Schreib einfach los…';
+  const scheduleSave = () => {
+    clearTimeout(reflexionSaveTimers.get(r.id));
+    reflexionSaveTimers.set(r.id, setTimeout(() => saveReflexionContent(r.id, ta.value), 600));
+  };
+  ta.addEventListener('input', scheduleSave);
+  ta.addEventListener('blur', () => {
+    clearTimeout(reflexionSaveTimers.get(r.id));
+    saveReflexionContent(r.id, ta.value);
+  });
+  card.appendChild(ta);
+
+  return card;
+}
+
+async function addReflexion() {
+  const res = await apiFetch('/api/reflections', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: '' }),
+  });
+  if (res.ok) {
+    const r = await res.json();
+    reflexionenList.querySelector('.habits-empty')?.remove();
+    const card = buildReflexionCard(r);
+    reflexionenList.insertBefore(card, reflexionenList.firstChild);
+    card.querySelector('.reflexion-textarea').focus();
+  } else {
+    showToast((await res.json()).error || 'Could not create reflection');
+  }
+}
+addReflexionBtn.onclick = addReflexion;
+
+async function saveReflexionContent(id, content) {
+  await apiFetch(`/api/reflections/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+}
+
+function removeReflexion(id, card) {
+  deleteWithUndo(card, 'Reflexion', async () => {
+    const res = await apiFetch(`/api/reflections/${id}`, { method: 'DELETE' });
+    if (res.ok) card.remove();
+    else loadReflexionen();
+  });
 }
 
 // --- cycles -----------------------------------------------------------------
@@ -3536,6 +3632,7 @@ const PALETTE_STATIC_COMMANDS = [
   { label: 'Go to Goals', category: 'View', run: () => switchView('goals') },
   { label: 'Go to Life', category: 'View', run: () => switchView('life') },
   { label: 'Go to Learning Log', category: 'View', run: () => switchView('learninglog') },
+  { label: 'Go to Reflexionen', category: 'View', run: () => switchView('reflexionen') },
 ];
 
 let paletteOpen = false;
