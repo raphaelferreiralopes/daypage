@@ -296,8 +296,8 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 }
 .primary-btn:hover { background: var(--accent-strong); }
 .primary-btn:active { transform: scale(0.97); }
-#entryHeader, #checklistHeader { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; }
-#entryHeader h2, #checklistHeader h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.021em; }
+#entryHeader, #checklistHeader, #reflexionenHeader { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; }
+#entryHeader h2, #checklistHeader h2, #reflexionenHeader h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.021em; }
 #entryDate { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.021em; }
 #status { font-size: 12px; color: var(--faint); font-weight: 500; }
 
