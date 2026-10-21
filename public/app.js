@@ -2470,6 +2470,7 @@ function openReflexion(id, { focusTitle = false } = {}) {
   currentReflexionId = id;
   reflexionTitleInput.value = r.title || '';
   reflexionContentInput.value = r.content || '';
+  refreshRich(reflexionContentInput);
   reflexionOverlayMeta.textContent = new Date(r.created_at).toLocaleString(undefined, {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
@@ -3565,7 +3566,7 @@ function attachNotes(ta) {
   ta.addEventListener('blur', () => setTimeout(() => { if (slashTa === ta) closeSlash(); }, 150));
 }
 
-[editor, habitNotes, projectNotes, weekEditor, reflexionEditor, weekReflexionEditor].forEach(attachNotes);
+[editor, habitNotes, projectNotes, weekEditor, reflexionEditor, weekReflexionEditor, reflexionContentInput].forEach(attachNotes);
 
 // Give the cycle/habit/project note editors the same rendered backdrop as the
 // daily notes (checkboxes + **bold**), kept aligned + scroll-synced.
@@ -3593,7 +3594,7 @@ function makeRichFill(ta) {
   ta._richSync = sync;
   sync();
 }
-[habitNotes, projectNotes].forEach(makeRichFill);
+[habitNotes, projectNotes, reflexionContentInput].forEach(makeRichFill);
 const refreshRich = (ta) => ta._richSync && ta._richSync();
 
 // Bold/Italic/Strikethrough toolbar pinned to a note editor's corner
@@ -3627,7 +3628,7 @@ function addFormatToolbar(ta) {
   }
   wrap.appendChild(bar);
 }
-[editor, habitNotes, projectNotes, weekEditor, reflexionEditor, weekReflexionEditor].forEach(addFormatToolbar);
+[editor, habitNotes, projectNotes, weekEditor, reflexionEditor, weekReflexionEditor, reflexionContentInput].forEach(addFormatToolbar);
 
 // Auto-growing note editors (see autoGrowEditor & co.) have overflow:hidden —
 // the page scrolls instead of the box — which means the browser's built-in
