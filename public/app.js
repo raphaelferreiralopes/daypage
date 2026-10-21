@@ -54,6 +54,12 @@ const learningLogList = document.getElementById('learningLogList');
 const reflexionenView = document.getElementById('reflexionenView');
 const reflexionenList = document.getElementById('reflexionenList');
 const addReflexionBtn = document.getElementById('addReflexionBtn');
+const reflexionOverlay = document.getElementById('reflexionOverlay');
+const reflexionCloseBtn = document.getElementById('reflexionCloseBtn');
+const reflexionOverlayMeta = document.getElementById('reflexionOverlayMeta');
+const reflexionOverlayDel = document.getElementById('reflexionOverlayDel');
+const reflexionTitleInput = document.getElementById('reflexionTitleInput');
+const reflexionContentInput = document.getElementById('reflexionContentInput');
 const lifePrev = document.getElementById('lifePrev');
 const lifeNext = document.getElementById('lifeNext');
 const lifeTodayBtn = document.getElementById('lifeTodayBtn');
@@ -2375,58 +2381,69 @@ async function reorderChecklistItems(checklistId, itemIds) {
 }
 
 // --- reflexionen (freeform notes that don't fit any other tab) -------------
-let reflexionSaveTimers = new Map();
+// Overview shows a title + preview card per reflection; clicking one opens
+// it full-screen (#reflexionOverlay, covers the whole viewport incl. sidebar)
+// for distraction-free writing, autosaving title+content as you type.
+let reflexionCache = [];
+let currentReflexionId = null;
+let reflexionPageSaveTimer = null;
 
 async function loadReflexionen() {
-  const list = await apiFetch('/api/reflections').then((r) => r.json());
-  renderReflexionen(list);
+  reflexionCache = await apiFetch('/api/reflections').then((r) => r.json());
+  renderReflexionen();
 }
 
-function renderReflexionen(list) {
+function reflexionPreview(content) {
+  const text = String(content || '').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  return text.length > 160 ? text.slice(0, 160) + '…' : text;
+}
+
+function renderReflexionen() {
   reflexionenList.innerHTML = '';
-  if (!list.length) {
+  if (!reflexionCache.length) {
     reflexionenList.innerHTML =
       '<div class="habits-empty">Noch keine Reflexionen. Klick auf „+ Neue Reflexion“, um frei etwas aufzuschreiben.</div>';
     return;
   }
-  for (const r of list) reflexionenList.appendChild(buildReflexionCard(r));
+  for (const r of reflexionCache) reflexionenList.appendChild(buildReflexionCard(r));
 }
 
 function buildReflexionCard(r) {
   const card = document.createElement('div');
   card.className = 'ov-card reflexion-card';
+  card.dataset.id = r.id;
+  card.onclick = () => openReflexion(r.id);
 
   const top = document.createElement('div');
   top.className = 'ov-top';
+  const title = document.createElement('span');
+  const hasTitle = (r.title || '').trim();
+  title.className = 'reflexion-card-title' + (hasTitle ? '' : ' untitled');
+  title.textContent = hasTitle || 'Ohne Titel';
+  top.appendChild(title);
+  top.insertAdjacentHTML('beforeend', '<span class="ov-spacer"></span>');
   const meta = document.createElement('span');
   meta.className = 'reflexion-meta';
   meta.textContent = new Date(r.created_at).toLocaleString(undefined, {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
   top.appendChild(meta);
-  top.insertAdjacentHTML('beforeend', '<span class="ov-spacer"></span>');
   const del = document.createElement('button');
   del.className = 'ov-del';
   del.innerHTML = TRASH_SVG;
   del.title = 'Reflexion löschen';
-  del.onclick = () => removeReflexion(r.id, card);
+  del.onclick = (e) => { e.stopPropagation(); removeReflexion(r.id, card); };
   top.appendChild(del);
   card.appendChild(top);
 
-  const ta = document.createElement('textarea');
-  ta.className = 'reflexion-textarea';
-  ta.value = r.content || '';
-  ta.placeholder = 'Schreib einfach los…';
-  const scheduleSave = () => {
-    clearTimeout(reflexionSaveTimers.get(r.id));
-    reflexionSaveTimers.set(r.id, setTimeout(() => saveReflexionContent(r.id, ta.value), 600));
-  };
-  ta.addEventListener('input', scheduleSave);
-  ta.addEventListener('blur', () => {
-    clearTimeout(reflexionSaveTimers.get(r.id));
-    saveReflexionContent(r.id, ta.value);
-  });
-  card.appendChild(ta);
+  const preview = reflexionPreview(r.content);
+  if (preview) {
+    const p = document.createElement('div');
+    p.className = 'reflexion-card-preview';
+    p.textContent = preview;
+    card.appendChild(p);
+  }
 
   return card;
 }
@@ -2435,33 +2452,86 @@ async function addReflexion() {
   const res = await apiFetch('/api/reflections', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: '' }),
+    body: JSON.stringify({ title: '', content: '' }),
   });
   if (res.ok) {
     const r = await res.json();
-    reflexionenList.querySelector('.habits-empty')?.remove();
-    const card = buildReflexionCard(r);
-    reflexionenList.insertBefore(card, reflexionenList.firstChild);
-    card.querySelector('.reflexion-textarea').focus();
+    reflexionCache.unshift(r);
+    openReflexion(r.id, { focusTitle: true });
   } else {
     showToast((await res.json()).error || 'Could not create reflection');
   }
 }
 addReflexionBtn.onclick = addReflexion;
 
-async function saveReflexionContent(id, content) {
-  await apiFetch(`/api/reflections/${id}`, {
+function openReflexion(id, { focusTitle = false } = {}) {
+  const r = reflexionCache.find((x) => x.id === id);
+  if (!r) return;
+  currentReflexionId = id;
+  reflexionTitleInput.value = r.title || '';
+  reflexionContentInput.value = r.content || '';
+  reflexionOverlayMeta.textContent = new Date(r.created_at).toLocaleString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+  reflexionOverlay.hidden = false;
+  (focusTitle ? reflexionTitleInput : reflexionContentInput).focus();
+}
+
+function closeReflexion() {
+  clearTimeout(reflexionPageSaveTimer);
+  if (currentReflexionId) flushReflexionSave();
+  reflexionOverlay.hidden = true;
+  currentReflexionId = null;
+  renderReflexionen();
+}
+reflexionCloseBtn.onclick = closeReflexion;
+reflexionOverlayDel.onclick = () => {
+  if (!currentReflexionId) return;
+  const id = currentReflexionId;
+  clearTimeout(reflexionPageSaveTimer);
+  currentReflexionId = null;
+  reflexionOverlay.hidden = true;
+  renderReflexionen();
+  const card = reflexionenList.querySelector(`[data-id="${id}"]`);
+  if (card) removeReflexion(id, card);
+};
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !reflexionOverlay.hidden) closeReflexion();
+});
+
+function scheduleReflexionPageSave() {
+  clearTimeout(reflexionPageSaveTimer);
+  reflexionPageSaveTimer = setTimeout(flushReflexionSave, 600);
+}
+reflexionTitleInput.addEventListener('input', scheduleReflexionPageSave);
+reflexionContentInput.addEventListener('input', scheduleReflexionPageSave);
+
+async function flushReflexionSave() {
+  const id = currentReflexionId;
+  if (!id) return;
+  const title = reflexionTitleInput.value;
+  const content = reflexionContentInput.value;
+  const res = await apiFetch(`/api/reflections/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ title, content }),
   });
+  if (res.ok) {
+    const updated = await res.json();
+    const idx = reflexionCache.findIndex((x) => x.id === id);
+    if (idx !== -1) reflexionCache[idx] = updated;
+  }
 }
 
 function removeReflexion(id, card) {
   deleteWithUndo(card, 'Reflexion', async () => {
     const res = await apiFetch(`/api/reflections/${id}`, { method: 'DELETE' });
-    if (res.ok) card.remove();
-    else loadReflexionen();
+    if (res.ok) {
+      reflexionCache = reflexionCache.filter((x) => x.id !== id);
+      card.remove();
+    } else {
+      loadReflexionen();
+    }
   });
 }
 

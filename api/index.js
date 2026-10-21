@@ -166,7 +166,7 @@ app.post('/api/checklist-check', h(async (req, res) => res.json(await db.setChec
 // --- reflections (freeform notes that don't fit any other tab) -----------
 app.get('/api/reflections', h(async (req, res) => res.json(await db.listReflections(req.supabase, req.userId))));
 app.post('/api/reflections', h(async (req, res) => res.json(await db.createReflection(req.supabase, req.userId, req.body))));
-app.put('/api/reflections/:id', h(async (req, res) => res.json(await db.updateReflection(req.supabase, req.userId, req.params.id, req.body.content))));
+app.put('/api/reflections/:id', h(async (req, res) => res.json(await db.updateReflection(req.supabase, req.userId, req.params.id, req.body))));
 app.delete('/api/reflections/:id', h(async (req, res) => res.json(await db.deleteReflection(req.supabase, req.userId, req.params.id))));
 
 // --- projects ------------------------------------------------------------
