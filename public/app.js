@@ -2751,24 +2751,50 @@ function renderYearOverallProgress(y) {
     goalsOverallProgress.innerHTML = '';
     return;
   }
+  const reached = y.goals.filter((g) => (g.kind === 'manual' ? g.achieved : g.pct >= 100)).length;
+  // how far through the year we are, so the bar can show whether progress is on pace
+  const thisYear = Number(todayISO().slice(0, 4));
+  let yearPct = null;
+  if (y.year < thisYear) yearPct = 100;
+  else if (y.year === thisYear) {
+    const start = Date.UTC(y.year, 0, 1);
+    const days = (Date.UTC(y.year + 1, 0, 1) - start) / 86400000;
+    yearPct = Math.round(((Date.parse(todayISO() + 'T00:00:00Z') - start) / 86400000 + 1) / days * 100);
+  }
   goalsOverallProgress.innerHTML =
-    `<div class="cycle-progress-label"><span>Overall progress</span><span>${y.overall}%</span></div>` +
-    `<div class="bar big${y.overall >= 100 ? ' done' : ''}"><span style="width:${y.overall}%"></span></div>`;
+    `<div class="ygoal-summary-top">` +
+      `<div><div class="ygoal-summary-label">Overall progress</div>` +
+      `<div class="ygoal-summary-value">${y.overall}<span>%</span></div></div>` +
+      `<div class="ygoal-summary-meta"><span>${reached} of ${y.goals.length} reached</span>` +
+      (yearPct != null && yearPct < 100 ? `<span>${yearPct}% of the year passed</span>` : '') + `</div>` +
+    `</div>` +
+    `<div class="bar big${y.overall >= 100 ? ' done' : ''}"><span style="width:${y.overall}%"></span>` +
+      (yearPct != null && yearPct < 100 ? `<i class="ygoal-pace" style="left:${yearPct}%" title="Today"></i>` : '') +
+    `</div>`;
+}
+
+function yearGoalDelBtn(g, item) {
+  const del = document.createElement('button');
+  del.className = 'goal-del';
+  del.innerHTML = TRASH_SVG;
+  del.title = 'Delete goal';
+  del.onclick = () => deleteYearGoal_(g.id, g.label || g.habitName, item);
+  return del;
 }
 
 function renderYearGoalList(y) {
   yearGoalList.innerHTML = '';
   if (!y.goals.length) {
-    yearGoalList.innerHTML = '<div class="mini-empty"><span class="none">No goals yet for this year. These are separate from a cycle’s own goals — add a longer-term one below.</span></div>';
+    yearGoalList.innerHTML = '<div class="mini-empty"><span class="none">No goals yet for this year. These are separate from a cycle’s own goals — add a longer-term one above.</span></div>';
     return;
   }
   for (const g of y.goals) {
     const item = document.createElement('div');
-    item.className = 'goal-item';
+    item.className = 'ygoal';
 
     if (g.kind === 'manual') {
-      const top = document.createElement('div');
-      top.className = 'goal-top habit-row';
+      item.classList.add('ygoal-manual', 'habit-row');
+      if (g.achieved) item.classList.add('achieved');
       const control = document.createElement('div');
       control.className = 'control control-check';
       const cb = document.createElement('input');
@@ -2776,43 +2802,33 @@ function renderYearGoalList(y) {
       cb.checked = g.achieved;
       cb.onchange = () => editYearGoal(g.id, { achieved: cb.checked });
       control.appendChild(cb);
-      top.appendChild(control);
-      top.insertAdjacentHTML('beforeend', `<span class="goal-name">${esc(g.label)}</span>`);
-
-      const del = document.createElement('button');
-      del.className = 'goal-del';
-      del.innerHTML = TRASH_SVG;
-      del.title = 'Delete goal';
-      del.onclick = () => deleteYearGoal_(g.id, g.label, item);
-      top.appendChild(del);
-
-      item.appendChild(top);
-      item.insertAdjacentHTML('beforeend', `<div class="bar${g.achieved ? ' done' : ''}"><span style="width:${g.achieved ? 100 : 0}%"></span></div>`);
+      item.appendChild(control);
+      item.insertAdjacentHTML('beforeend', `<span class="ygoal-name">${esc(g.label)}</span>`);
+      item.insertAdjacentHTML('beforeend', `<span class="ygoal-pill${g.achieved ? ' done' : ''}">${g.achieved ? 'Achieved' : 'Open'}</span>`);
+      item.appendChild(yearGoalDelBtn(g, item));
       yearGoalList.appendChild(item);
       continue;
     }
 
     const top = document.createElement('div');
-    top.className = 'goal-top';
-    top.insertAdjacentHTML('beforeend', `<span class="goal-name">${esc(g.label || g.habitName)}</span>`);
-    top.insertAdjacentHTML('beforeend', `<span class="goal-current">${g.current}</span><span class="goal-sep">/</span>`);
+    top.className = 'ygoal-top';
+    top.insertAdjacentHTML('beforeend', `<span class="ygoal-name">${esc(g.label || g.habitName)}</span>`);
 
+    const nums = document.createElement('div');
+    nums.className = 'ygoal-nums';
+    nums.insertAdjacentHTML('beforeend', `<span class="ygoal-current">${g.current}</span><span class="goal-sep">/</span>`);
     const targetInp = document.createElement('input');
-    targetInp.className = 'goal-edit-target';
+    targetInp.className = 'goal-edit-target ygoal-target';
     targetInp.type = 'text';
     targetInp.inputMode = 'decimal';
     targetInp.value = g.target;
     targetInp.title = 'Target';
     targetInp.onchange = () => editYearGoal(g.id, { target: targetInp.value });
-    top.appendChild(targetInp);
-    top.insertAdjacentHTML('beforeend', `<span class="goal-unit">${esc(g.unit || '')}</span>`);
-
-    const del = document.createElement('button');
-    del.className = 'goal-del';
-    del.innerHTML = TRASH_SVG;
-    del.title = 'Delete goal';
-    del.onclick = () => deleteYearGoal_(g.id, g.label || g.habitName, item);
-    top.appendChild(del);
+    nums.appendChild(targetInp);
+    nums.insertAdjacentHTML('beforeend', `<span class="ygoal-unit">${esc(g.unit || '')}</span>`);
+    top.appendChild(nums);
+    top.insertAdjacentHTML('beforeend', `<span class="ygoal-pill${g.pct >= 100 ? ' done' : ''}">${g.pct}%</span>`);
+    top.appendChild(yearGoalDelBtn(g, item));
 
     item.appendChild(top);
     item.insertAdjacentHTML('beforeend', `<div class="bar${g.pct >= 100 ? ' done' : ''}"><span style="width:${g.pct}%"></span></div>`);
