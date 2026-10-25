@@ -496,7 +496,18 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 /* checkbox: hug its name (no gap) */
 .habit-row .control-check { width: auto; }
 /* value box: fixed width so the value boxes line up with each other */
-.habit-row .control-value { width: 84px; }
+.habit-row .control-value {
+  width: 84px; height: 26px; gap: 0; box-sizing: border-box;
+  background: var(--bg); border: 1px solid var(--border-strong); border-radius: 6px;
+}
+/* the value box is one field: the input fills it, the unit sits inside on the right */
+.habit-row .control-value input[type="text"] {
+  flex: 1; min-width: 0; width: auto; height: 100%;
+  background: transparent; border: none; border-radius: 6px;
+}
+.habit-row .control-value .unit { flex-shrink: 0; padding-right: 8px; font-size: 12px; color: var(--faint); }
+.habit-row .control-value:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.habit-row .control-value input[type="text"]:focus { border: none; box-shadow: none; }
 .habit-row .name { flex: 1; }
 
 /* custom macOS/iOS-style checkbox: rounded square, blue fill, white check */
