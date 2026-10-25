@@ -545,6 +545,18 @@ body.sidebar-collapsed #sidebarToggle { left: 0; transform: translateY(-50%) tra
 .habit-row:hover .del { opacity: 1; }
 .habit-row .del:hover { color: var(--red); background: var(--red-soft); }
 .habit-row input:disabled { opacity: 0.65; cursor: default; }
+/* hidden habits: collapsed until expanded via the toggle under the list */
+#habitList .habit-row.is-hidden { display: none; }
+#habitList.show-hidden .habit-row.is-hidden { display: flex; }
+#habitList.show-hidden .habit-row.is-hidden .control,
+#habitList.show-hidden .habit-row.is-hidden .name { opacity: 0.45; }
+.habit-row .hide-toggle:hover { color: var(--text); background: var(--bg); }
+.habits-hidden-toggle {
+  margin-top: 10px; padding: 0; background: none; border: none;
+  color: var(--faint); font-size: 12px; cursor: pointer;
+}
+.habits-hidden-toggle:hover { color: var(--accent); }
+.habits-hidden-toggle[hidden] { display: none; }
 #habitList:empty::after,
 .habits-empty { color: var(--muted); font-size: 13px; }
 .view-hint { color: var(--muted); font-size: 13px; margin: -14px 0 16px; }

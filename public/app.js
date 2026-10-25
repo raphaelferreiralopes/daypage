@@ -3,6 +3,8 @@
 const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7"/><path d="M6 7l1 13a1.5 1.5 0 0 0 1.5 1.4h7A1.5 1.5 0 0 0 17 20L18 7"/><path d="M10 11v6M14 11v6"/></svg>';
 const PLAY_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5v13a1 1 0 0 0 1.53.85l10.6-6.5a1 1 0 0 0 0-1.7L8.53 4.65A1 1 0 0 0 7 5.5z"/></svg>';
 const STOP_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+const EYE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.6M6.6 6.6C3.7 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>';
 const GRIP_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg>';
 
 const dayList = document.getElementById('dayList');
@@ -14,6 +16,7 @@ const readonlyNote = document.getElementById('readonlyNote');
 const todayBtn = document.getElementById('todayBtn');
 const habitList = document.getElementById('habitList');
 const addHabitBtn = document.getElementById('addHabitBtn');
+const habitHiddenToggle = document.getElementById('habitHiddenToggle');
 const summaryInput = document.getElementById('summaryInput');
 // time tracker
 const timeTotal = document.getElementById('timeTotal');
@@ -1356,8 +1359,45 @@ async function removeProject(id, name, row) {
 }
 
 // --- habits -----------------------------------------------------------------
+// Hidden habits are still rendered (so drag-reorder sends every id), just
+// collapsed via CSS until the user expands them. Expanded state lasts the session.
+let showHiddenHabits = false;
+
+function updateHiddenHabitsToggle() {
+  const n = habitList.querySelectorAll('.habit-row.is-hidden').length;
+  habitHiddenToggle.hidden = n === 0;
+  if (!n) showHiddenHabits = false;
+  habitList.classList.toggle('show-hidden', showHiddenHabits);
+  habitHiddenToggle.textContent = showHiddenHabits ? 'Collapse hidden habits' : `${n} hidden habit${n === 1 ? '' : 's'} · show`;
+}
+
+habitHiddenToggle.onclick = () => {
+  showHiddenHabits = !showHiddenHabits;
+  updateHiddenHabitsToggle();
+};
+
+async function setHabitHidden(h, hidden, row) {
+  row.classList.toggle('is-hidden', hidden);
+  const btn = row.querySelector('.hide-toggle');
+  btn.innerHTML = hidden ? EYE_SVG : EYE_OFF_SVG;
+  btn.title = hidden ? 'Show on daily pages' : 'Hide from daily pages';
+  updateHiddenHabitsToggle();
+  const res = await apiFetch(`/api/habits/${h.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hidden }),
+  });
+  if (!res.ok) {
+    showToast('Could not update habit');
+    openDay(current);
+    return;
+  }
+  h.hidden = hidden;
+}
+
 function renderHabits(habits, values) {
   habitList.innerHTML = '';
+  habitHiddenToggle.hidden = true;
   addHabitBtn.hidden = !editable; // can't manage habits from a future date's page
   if (!habits.length) {
     habitList.innerHTML = '<div class="habits-empty">No habits yet. Add one to start tracking.</div>';
@@ -1366,7 +1406,7 @@ function renderHabits(habits, values) {
   const ordered = habits.slice();
   for (const h of ordered) {
     const row = document.createElement('div');
-    row.className = 'habit-row';
+    row.className = 'habit-row' + (h.hidden ? ' is-hidden' : '');
     row.dataset.habitId = h.id;
     const val = values[h.id];
 
@@ -1426,6 +1466,13 @@ function renderHabits(habits, values) {
     row.insertAdjacentHTML('beforeend', `<span class="name">${esc(h.name)}</span>`);
 
     if (editable) {
+      const hide = document.createElement('button');
+      hide.className = 'del hide-toggle';
+      hide.innerHTML = h.hidden ? EYE_SVG : EYE_OFF_SVG;
+      hide.title = h.hidden ? 'Show on daily pages' : 'Hide from daily pages';
+      hide.onclick = () => setHabitHidden(h, !row.classList.contains('is-hidden'), row);
+      row.appendChild(hide);
+
       const del = document.createElement('button');
       del.className = 'del';
       del.textContent = '✕';
@@ -1435,6 +1482,7 @@ function renderHabits(habits, values) {
     }
     habitList.appendChild(row);
   }
+  updateHiddenHabitsToggle();
 }
 
 // Dropping past the last row (i.e. not over any .habit-row) appends it as
