@@ -149,8 +149,20 @@ header#top.scrolled {
 .nav { display: flex; gap: 26px; margin-left: 12px; }
 .nav a { font-size: 14px; color: var(--ink-2); transition: color 0.15s ease; }
 .nav a:hover { color: var(--ink); }
-.bar-actions { margin-left: auto; display: flex; align-items: center; gap: 20px; }
+.bar-actions { margin-left: auto; display: flex; align-items: center; gap: 18px; }
 .bar-actions .link-quiet { font-size: 14px; }
+
+/* language switch: a small segmented control, same shape as the app's theme switch */
+.lang { display: inline-flex; padding: 2px; border-radius: 999px; background: var(--day-empty); }
+.lang button {
+  border: 0; background: transparent; cursor: pointer;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--ink-3);
+  padding: 4px 9px; border-radius: 999px; transition: background-color 0.15s ease, color 0.15s ease;
+}
+.lang button:hover { color: var(--ink); }
+.lang button[aria-pressed="true"] { background: var(--sheet); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
+@media (prefers-color-scheme: dark) { .lang button[aria-pressed="true"] { background: #3a3a3c; } }
+html:not([lang="de"]) .only-de { display: none; }
 
 /* --- hero ------------------------------------------------------------ */
 .hero { padding: clamp(48px, 9vw, 110px) 0 clamp(64px, 8vw, 100px); }
@@ -434,7 +446,7 @@ header#top.scrolled {
 .foot nav a:hover { color: var(--ink); }
 
 /* --- responsive ------------------------------------------------------ */
-@media (max-width: 1020px) {
+@media (max-width: 1080px) {
   .nav { display: none; }
   .scale-list { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 56px; }
   .rule { grid-template-columns: 1fr; }
