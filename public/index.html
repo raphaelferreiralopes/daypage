@@ -4,8 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light dark" />
-  <meta name="description" content="A private daily journal with notes, habits, checklists, cycles, time tracking, yearly goals, and a learning log — one page for today, one place for everything else." />
-  <title>Journal</title>
+  <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)" />
+  <title>Journal — one page a day, a year you can see</title>
+  <meta name="description" content="A private daily journal that keeps notes, habits, time tracking, cycles and yearly goals on one page for today — and lines every page up into weeks, cycles and a whole year." />
+  <meta property="og:title" content="Journal — one page a day, a year you can see" />
+  <meta property="og:description" content="Notes, habits, time, cycles and yearly goals on one private page per day." />
+  <meta property="og:type" content="website" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23007aff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'/%3E%3Cpath d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/%3E%3C/svg%3E" />
   <script>
     // If a Supabase session is already sitting in localStorage, skip the landing
@@ -29,203 +34,376 @@
       } catch (e) {}
     })();
   </script>
+  <link rel="preload" href="/fonts/newsreader.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/landing.css" />
 </head>
 <body>
-  <header id="lpHeader">
-    <div id="lpBrand">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      Journal
-    </div>
-    <div id="lpNavActions">
-      <a href="/app" id="lpNavSignIn">Log in</a>
-      <a href="/app?mode=signup" id="lpNavSignUp" class="btn-primary">Sign up</a>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header id="top">
+    <div class="bar">
+      <a href="#main" class="brand" aria-label="Journal, back to top">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Journal
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#day">The day</a>
+        <a href="#scales">Weeks &amp; cycles</a>
+        <a href="#rules">How editing works</a>
+        <a href="#private">Privacy</a>
+        <a href="#faq">Questions</a>
+      </nav>
+      <div class="bar-actions">
+        <a href="/app" class="link-quiet">Log in</a>
+        <a href="/app?mode=signup" class="btn btn-small">Sign up</a>
+      </div>
     </div>
   </header>
 
-  <main>
-    <section id="lpHero">
-      <div class="wide hero-grid">
+  <main id="main">
+
+    <!-- HERO: the year, drawn up to today -->
+    <section class="hero" aria-labelledby="heroTitle">
+      <div class="wrap">
+        <p class="hero-date" id="heroDate">Today</p>
+        <h1 id="heroTitle">One page a day.<br />A year you can see.</h1>
+        <div class="hero-foot">
+          <p class="lede">Journal keeps your notes, habits, time and goals on a single page for today, then lines every page up into weeks, cycles and a whole year. One private place instead of five apps that never talk to each other.</p>
+          <div class="actions">
+            <a href="/app?mode=signup" class="btn">Start today’s page</a>
+            <a href="/app" class="link-quiet">I already have an account</a>
+          </div>
+        </div>
+
+        <figure class="year" aria-label="Your year, one square per day">
+          <div class="year-grid" id="yearGrid"></div>
+          <figcaption class="year-cap">
+            <span id="yearCount">Every square is a day.</span>
+            <span class="year-legend" aria-hidden="true">
+              <span class="lg lg-past"></span> written
+              <span class="lg lg-today"></span> today
+              <span class="lg lg-future"></span> still blank
+            </span>
+          </figcaption>
+          <div class="year-tip" id="yearTip" role="status" aria-live="polite" hidden></div>
+        </figure>
+      </div>
+    </section>
+
+    <!-- THE DAY: interactive daily page -->
+    <section class="day" id="day" aria-labelledby="dayTitle">
+      <div class="wrap">
+        <div class="section-head">
+          <h2 id="dayTitle">Everything about today, on today’s page.</h2>
+          <p>Six tabs, one date. Log the hours, tick the habits, write what happened, keep what you learned, and leave one line for the calendar. Click through — this is how the app looks.</p>
+        </div>
+
+        <div class="app" id="appDemo">
+          <aside class="app-side" aria-hidden="true">
+            <div class="side-title">Journal</div>
+            <ul class="side-days" id="sideDays"></ul>
+          </aside>
+          <div class="app-main">
+            <div class="app-head">
+              <div>
+                <div class="app-date" id="demoDate">Today</div>
+                <div class="app-sub">Saves itself as you type</div>
+              </div>
+              <div class="app-chips" aria-hidden="true">
+                <span class="chip">Habits <b id="chipHabits">2 / 4</b></span>
+                <span class="chip">Time <b>3h 05m</b></span>
+              </div>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="Daily page tabs">
+              <button role="tab" id="t-time" aria-controls="p-time" aria-selected="false" tabindex="-1">Time</button>
+              <button role="tab" id="t-habits" aria-controls="p-habits" aria-selected="false" tabindex="-1">Habits</button>
+              <button role="tab" id="t-notes" aria-controls="p-notes" aria-selected="true">Notes</button>
+              <button role="tab" id="t-reflexion" aria-controls="p-reflexion" aria-selected="false" tabindex="-1">Reflexion</button>
+              <button role="tab" id="t-learnings" aria-controls="p-learnings" aria-selected="false" tabindex="-1">Learnings</button>
+              <button role="tab" id="t-recap" aria-controls="p-recap" aria-selected="false" tabindex="-1">Recap</button>
+            </div>
+
+            <div class="panels">
+              <div role="tabpanel" id="p-time" aria-labelledby="t-time" hidden>
+                <div class="timer">
+                  <span class="timer-dot" aria-hidden="true"></span>
+                  <span class="timer-clock" id="timerClock">0:24:18</span>
+                  <span class="timer-proj">Deep work</span>
+                  <span class="timer-stop" aria-hidden="true">Stop</span>
+                </div>
+                <div class="bars">
+                  <div class="brow"><span>Deep work</span><i style="--w:82%"></i><b>1h 45m</b></div>
+                  <div class="brow"><span>Thesis</span><i style="--w:44%"></i><b>55m</b></div>
+                  <div class="brow"><span>Admin</span><i style="--w:20%"></i><b>25m</b></div>
+                </div>
+                <p class="panel-note">Start a timer per project or add time by hand afterwards. Today, this week and the current cycle add themselves up.</p>
+              </div>
+
+              <div role="tabpanel" id="p-habits" aria-labelledby="t-habits" hidden>
+                <div class="habits" id="habitList">
+                  <button type="button" class="habit" aria-pressed="true"><span class="box" aria-hidden="true"></span><span class="h-name">Workout</span><span class="h-streak">12-day streak</span></button>
+                  <button type="button" class="habit" aria-pressed="true"><span class="box" aria-hidden="true"></span><span class="h-name">Morning pages</span><span class="h-streak">34-day streak</span></button>
+                  <button type="button" class="habit" aria-pressed="false"><span class="box" aria-hidden="true"></span><span class="h-name">Reading</span><span class="h-streak"></span></button>
+                  <div class="habit habit-num"><span class="num">6<small>/ 8 glasses</small></span><span class="h-name">Water</span><span class="h-streak">counts as a number</span></div>
+                </div>
+                <p class="panel-note">A habit is a checkbox or a number. Tap one above. Each habit gets its own streak and a 90-day heatmap.</p>
+              </div>
+
+              <div role="tabpanel" id="p-notes" aria-labelledby="t-notes">
+                <div class="doc">
+                  <h4>Seminar prep</h4>
+                  <p>Outline is done, slides are not. Moving the case study to the front made the argument much clearer.</p>
+                  <ul class="todo">
+                    <li class="done">Send draft to Lena</li>
+                    <li>Book the room for Thursday</li>
+                    <li>Cut slide 9<span class="caret" aria-hidden="true"></span></li>
+                  </ul>
+                  <div class="slash" aria-hidden="true">
+                    <div class="slash-row sel"><span class="si">☐</span>Checkbox<em>To-do</em></div>
+                    <div class="slash-row"><span class="si">•</span>Bullet list<em>- item</em></div>
+                    <div class="slash-row"><span class="si">H</span>Heading<em>Section</em></div>
+                    <div class="slash-row"><span class="si">—</span>Divider<em>Separator</em></div>
+                  </div>
+                </div>
+                <p class="panel-note">Type <kbd>/</kbd> for checkboxes, lists, headings and dividers.</p>
+              </div>
+
+              <div role="tabpanel" id="p-reflexion" aria-labelledby="t-reflexion" hidden>
+                <div class="doc">
+                  <p class="serif">I kept postponing the hard part of the day until there was no energy left for it. Tomorrow the thesis block goes first, before email, before anything with a notification.</p>
+                  <p class="serif">The walk at lunch helped more than the second coffee.</p>
+                </div>
+                <p class="panel-note">Room for as much as you want to say about the day. Optional, like everything here.</p>
+              </div>
+
+              <div role="tabpanel" id="p-learnings" aria-labelledby="t-learnings" hidden>
+                <div class="doc">
+                  <ul class="plain">
+                    <li>Leading with the example made the abstract part easy to follow.</li>
+                    <li>Two short focus blocks beat one long one after 4 pm.</li>
+                  </ul>
+                </div>
+                <p class="panel-note">Every learning you write also lands in the Learning Log, newest first, across all your days.</p>
+              </div>
+
+              <div role="tabpanel" id="p-recap" aria-labelledby="t-recap" hidden>
+                <label class="recap">
+                  <span class="recap-label">Today in one line</span>
+                  <input type="text" id="recapInput" maxlength="90" value="Seminar outline done, walk at lunch, early night." />
+                </label>
+                <p class="panel-note">This line is what you see on the Life calendar — a month or a whole year of days, one sentence each.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCALES: day → week → cycle → year -->
+    <section class="scales" id="scales" aria-labelledby="scalesTitle">
+      <div class="wrap">
+        <div class="section-head">
+          <h2 id="scalesTitle">Zoom out without switching apps.</h2>
+          <p>The daily page is where you write. Everything else is the same days, seen from further away.</p>
+        </div>
+
+        <ol class="scale-list">
+          <li class="scale">
+            <div class="dots" data-n="1" aria-hidden="true"></div>
+            <h3>A day</h3>
+            <p>Notes, habits, time, reflexion, learnings and a one-line recap. Plus recurring checklists that reset every morning — the shutdown routine, the gym bag.</p>
+          </li>
+          <li class="scale">
+            <div class="dots" data-n="7" aria-hidden="true"></div>
+            <h3>A week</h3>
+            <p>Weekly notes and a week reflexion, starting Monday. Open while the week runs, then kept as it was.</p>
+          </li>
+          <li class="scale">
+            <div class="dots" data-n="42" aria-hidden="true"></div>
+            <h3>A cycle</h3>
+            <p>A stretch of weeks you name yourself, like a semester or a quarter. Set its priorities, write under each one, and add goals that count themselves from your habits or logged time.</p>
+          </li>
+          <li class="scale">
+            <div class="dots" data-n="365" aria-hidden="true"></div>
+            <h3>A year</h3>
+            <p>Yearly goals, as a yes or no or a number to reach. The Life calendar with every recap. A learning log that keeps growing.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- GOALS: self-counting -->
+    <section class="goals" aria-labelledby="goalsTitle">
+      <div class="wrap goals-grid">
+        <div class="goals-text">
+          <h2 id="goalsTitle">Goals that keep score on their own.</h2>
+          <p>Link a cycle goal to a habit or a project and it fills in as you live the days. Tick off a workout, the goal moves. Stop a timer, the hours count. No progress numbers to remember to update on Sunday night.</p>
+          <p>Yearly goals sit on their own page, apart from any cycle, so the big things stay visible all year.</p>
+        </div>
+        <div class="cycle-card" aria-label="Example cycle">
+          <div class="cc-head">
+            <div>
+              <div class="cc-name">Winter semester</div>
+              <div class="cc-dates">Oct 14 to Feb 9</div>
+            </div>
+            <div class="cc-left">80 days left</div>
+          </div>
+          <div class="cc-label">Priorities</div>
+          <ol class="cc-prio">
+            <li>Hand in the thesis proposal</li>
+            <li>Keep the morning routine on weekdays</li>
+            <li>No screens after 10 pm</li>
+          </ol>
+          <div class="cc-label">Goals</div>
+          <div class="cc-goal">
+            <div class="cc-gtop"><span>Deep work</span><span class="src">from Time</span><b>32h of 40h</b></div>
+            <div class="track"><i style="--w:80%"></i></div>
+          </div>
+          <div class="cc-goal">
+            <div class="cc-gtop"><span>Workout</span><span class="src">from Habits</span><b>18 of 24</b></div>
+            <div class="track"><i style="--w:75%"></i></div>
+          </div>
+          <div class="cc-goal">
+            <div class="cc-gtop"><span>Books this year</span><span class="src">yearly goal</span><b>14 of 20</b></div>
+            <div class="track"><i style="--w:70%"></i></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RULES: edit windows -->
+    <section class="rules" id="rules" aria-labelledby="rulesTitle">
+      <div class="wrap rules-grid">
         <div>
-          <p id="heroDate"></p>
-          <h1>Today gets a page. So does every day after it.</h1>
-          <p class="lede">A private daily journal with habits, checklists, cycles, time tracking, yearly goals, and a running learning log — instead of five separate apps that don't talk to each other.</p>
-          <div id="lpHeroActions">
-            <a href="/app?mode=signup" class="btn-primary">Start today's page</a>
-            <a href="/app" class="btn-text">Log in</a>
-          </div>
+          <h2 id="rulesTitle">A record that stays a record.</h2>
+          <p class="rules-intro">A journal is only worth rereading if it says what you thought at the time. So there are a few simple rules about what can be changed, and the server enforces them — not just the screen.</p>
         </div>
-        <div>
-          <div class="page-mock hero-mock" aria-hidden="true">
-            <nav class="mock-tabs">
-              <span class="mock-tab">Time</span>
-              <span class="mock-tab">Habits</span>
-              <span class="mock-tab active">Notes</span>
-              <span class="mock-tab">Reflexion</span>
-              <span class="mock-tab">Learnings</span>
-            </nav>
-            <div class="mock-body-pad">
-              <div class="page-mock-head">
-                <span class="page-mock-title" id="heroMockDate">Today</span>
-                <span class="page-mock-tag">Editable until midnight</span>
-              </div>
-              <div class="mock-line w82"></div>
-              <div class="mock-line w95"></div>
-              <div class="mock-line w40"><span class="mock-caret"></span></div>
-              <div class="mock-chiprow">
-                <span class="mock-chip">Habits <strong>3 / 4</strong></span>
-                <span class="mock-chip">Time <strong>2h 40m</strong></span>
-                <span class="mock-chip">Cycle <strong>WHU Q1</strong></span>
-              </div>
-            </div>
+        <dl class="rule-list">
+          <div class="rule">
+            <dt>Yesterday is still open.</dt>
+            <dd>Forgot to log last night? Any past day can be filled in or corrected.</dd>
+          </div>
+          <div class="rule">
+            <dt>Tomorrow stays blank.</dt>
+            <dd>Future days can’t be written ahead. A page starts when its day does.</dd>
+          </div>
+          <div class="rule">
+            <dt>A week closes on Sunday.</dt>
+            <dd>Weekly notes and the week reflexion are editable during that week only.</dd>
+          </div>
+          <div class="rule">
+            <dt>A cycle ends on its end date.</dt>
+            <dd>After that, its priorities and notes stay exactly as you left them.</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- KEYBOARD -->
+    <section class="keys" aria-labelledby="keysTitle">
+      <div class="wrap keys-grid">
+        <div class="palette" role="search">
+          <label class="pal-input">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <span class="sr">Filter commands</span>
+            <input type="text" id="palInput" placeholder="Jump to…" autocomplete="off" spellcheck="false" />
+            <kbd id="palKbd">⌘K</kbd>
+          </label>
+          <ul class="pal-list" id="palList"></ul>
+        </div>
+        <div class="keys-text">
+          <h2 id="keysTitle">Quick when you know where you’re going.</h2>
+          <p>Press <kbd class="kbd-mod">⌘</kbd><kbd>K</kbd> anywhere in the app to jump to a view, a habit, a project or a cycle. Type <kbd>/</kbd> in any note for a checkbox or a heading. Try the box on the left — it filters the same commands.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRIVACY -->
+    <section class="private" id="private" aria-labelledby="privateTitle">
+      <div class="wrap">
+        <div class="section-head">
+          <h2 id="privateTitle">Private by construction.</h2>
+          <p>What you write about your days is nobody else’s business. That’s built into how the data is stored, not left to good intentions.</p>
+        </div>
+        <div class="facts">
+          <div class="fact">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <h3>Isolated in the database</h3>
+            <p>Every row carries its owner, and Postgres row-level security refuses any read or write by another account — even if the app itself had a bug.</p>
+          </div>
+          <div class="fact">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            <h3>Export everything, any time</h3>
+            <p>One click downloads all of your data as JSON: every day, habit, cycle, goal and time entry.</p>
+          </div>
+          <div class="fact">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>
+            <h3>Delete means deleted</h3>
+            <p>Deleting your account removes it and everything attached to it, permanently. Nothing is kept on the side.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="split" id="entryNotes">
-      <div class="wide">
-        <div class="split-visual stack">
-          <div class="stack-back" aria-hidden="true"></div>
-          <div class="stack-front page-mock">
-            <div class="mock-body-pad">
-              <div class="page-mock-head">
-                <span class="page-mock-title">Tuesday</span>
-              </div>
-              <div class="mock-line w70"></div>
-              <div class="mock-line w95"></div>
-              <div class="mock-line w55"><span class="mock-caret"></span></div>
-            </div>
-          </div>
-          <p class="lock-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Monday's page — read-only now.</p>
-        </div>
-        <div class="split-text">
-          <span class="eyebrow">Notes</span>
-          <h2>Only today is yours to edit.</h2>
-          <p>Every day gets one page for whatever's on your mind. Once the day ends, the page locks — read-only, enforced by the server, not just hidden in the interface — so your history stays honest instead of getting quietly rewritten weeks later.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="split reverse" id="entryHabits">
-      <div class="wide">
-        <div class="split-visual page-mock" id="habitMock">
-          <div class="mock-body-pad">
-            <p class="habit-summary">Today · <strong>2 / 4</strong></p>
-            <button class="habit-row" data-checked="true"><span class="habit-box"></span> Workout <span class="habit-streak">12 days</span></button>
-            <button class="habit-row" data-checked="true"><span class="habit-box"></span> Morning pages <span class="habit-streak">34 days</span></button>
-            <button class="habit-row" data-checked="false"><span class="habit-box"></span> Deep work · 90 min <span class="habit-streak"></span></button>
-            <button class="habit-row" data-checked="false"><span class="habit-box"></span> Reading <span class="habit-streak"></span></button>
-          </div>
-        </div>
-        <div class="split-text">
-          <span class="eyebrow">Habits</span>
-          <h2>Check it off. Watch the streak build.</h2>
-          <p>Track a checkbox or a number, once a day. Every habit's detail page has its own streak count and a 90-day heatmap, so a good run is something you can actually see. Nothing to configure beyond that — this one's live, try it.</p>
+    <!-- FAQ -->
+    <section class="faq" id="faq" aria-labelledby="faqTitle">
+      <div class="wrap faq-grid">
+        <h2 id="faqTitle">Questions</h2>
+        <div class="faq-list">
+          <details>
+            <summary>What does it cost?</summary>
+            <p>Nothing. Sign up with an email and a password and today’s page is ready.</p>
+          </details>
+          <details>
+            <summary>Do I have to use every feature?</summary>
+            <p>No. Every tab and every view is optional. Plenty of people only write notes and a recap; habits, time and cycles are there when you want them.</p>
+          </details>
+          <details>
+            <summary>Can I go back and change an old entry?</summary>
+            <p>Daily pages, yes — any day up to today. Weekly notes only during their week, and a cycle until its end date. Future days can’t be written ahead.</p>
+          </details>
+          <details>
+            <summary>When does a new day start?</summary>
+            <p>At midnight, Berlin time. The date is decided on the server, so it’s the same on every device you use.</p>
+          </details>
+          <details>
+            <summary>Can I take my data with me?</summary>
+            <p>Yes. Account settings has a JSON export of everything you’ve written and tracked, available whenever you want it.</p>
+          </details>
+          <details>
+            <summary>I forgot my password.</summary>
+            <p>Use “Forgot password” on the sign-in screen and you’ll get a reset link by email.</p>
+          </details>
         </div>
       </div>
     </section>
 
-    <section class="split" id="entryCycles">
-      <div class="wide">
-        <div class="split-visual page-mock">
-          <div class="mock-body-pad">
-            <div class="priority-row"><span class="priority-num">1</span> Ship the WHU application</div>
-            <div class="priority-row"><span class="priority-num">2</span> Keep the morning routine daily</div>
-            <div class="priority-row"><span class="priority-num">3</span> No screens after 10pm</div>
-            <div class="goal-block">
-              <div class="goal-top"><span>Deep work</span><strong>32h / 40h</strong></div>
-              <div class="time-track"><div class="time-fill" style="--w:80%"></div></div>
-            </div>
-          </div>
+    <!-- CTA -->
+    <section class="cta" aria-labelledby="ctaTitle">
+      <div class="wrap">
+        <p class="cta-date" id="ctaDate">Today</p>
+        <h2 id="ctaTitle">Today’s page is still blank.</h2>
+        <div class="actions actions-center">
+          <a href="/app?mode=signup" class="btn btn-large">Start today’s page</a>
         </div>
-        <div class="split-text">
-          <span class="eyebrow">Cycles</span>
-          <h2>Pick a stretch of weeks. Decide what matters in it.</h2>
-          <p>A cycle is a few weeks or months with its own named priorities, each with room to write — plus goals that track themselves against a habit or your logged time, instead of a number you have to remember to update by hand.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="split reverse" id="entryTime">
-      <div class="wide">
-        <div class="split-visual page-mock">
-          <div class="mock-body-pad">
-            <div class="timer-readout"><span class="timer-dot"></span> <span class="timer-time">24:18</span> <span class="timer-project">· Deep work</span></div>
-            <div class="time-row"><span class="time-label">Deep work</span><div class="time-track"><div class="time-fill" style="--w:82%"></div></div><span class="time-val">2h 40m</span></div>
-            <div class="time-row"><span class="time-label">Meetings</span><div class="time-track"><div class="time-fill" style="--w:46%"></div></div><span class="time-val">1h 30m</span></div>
-            <div class="time-row"><span class="time-label">Admin</span><div class="time-track"><div class="time-fill" style="--w:20%"></div></div><span class="time-val">40m</span></div>
-          </div>
-        </div>
-        <div class="split-text">
-          <span class="eyebrow">Time</span>
-          <h2>See where the day actually went.</h2>
-          <p>Start a timer per project, or log time by hand after the fact. Totals add themselves up for today, the week, and the cycle you're in — no separate spreadsheet to keep in sync.</p>
-        </div>
-      </div>
-    </section>
-
-    <section id="lpMosaic">
-      <div class="wide">
-        <div class="mosaic-head">
-          <h2>And the rest of your day, covered too.</h2>
-          <p>The four above are the core loop. These fill in the rest — all real, all part of the same account.</p>
-        </div>
-        <div class="mosaic-grid">
-          <div class="tile">
-            <h3>Reflect</h3>
-            <p>Recap for one sentence, Reflexion for however much more you want to say. Neither is required.</p>
-            <div class="reflect-row">
-              <span class="reflect-label">Recap</span>
-              <span class="reflect-text">Shipped the habit streak view. Small scope, real progress.</span>
-            </div>
-          </div>
-          <div class="tile">
-            <h3>Checklist</h3>
-            <p>Recurring daily lists for things that aren't really about a streak — a shutdown routine, what to pack.</p>
-            <button class="habit-row" data-checked="true" style="pointer-events:none"><span class="habit-box"></span> Lay out tomorrow's clothes</button>
-            <button class="habit-row" data-checked="false" style="pointer-events:none"><span class="habit-box"></span> Lights out by 11</button>
-          </div>
-          <div class="tile">
-            <h3>Goals</h3>
-            <p>Separate from a cycle's own goals — things aimed at over the whole year, plain yes/no or a tracked number.</p>
-            <div class="priority-row" style="border:none;padding-top:0"><span class="year-check"></span> Run a half marathon</div>
-            <div class="goal-block" style="margin-top:10px">
-              <div class="goal-top"><span>Books read</span><strong>14 / 20</strong></div>
-              <div class="time-track"><div class="time-fill" style="--w:70%"></div></div>
-            </div>
-          </div>
-          <div class="tile">
-            <h3>Life</h3>
-            <p>Every Recap, laid out on a calendar — a month or a full year at once. Click a day to open its page.</p>
-            <div class="life-grid" id="lifeMock" aria-hidden="true"></div>
-          </div>
-          <div class="tile">
-            <h3>Learning Log</h3>
-            <p>Whatever you note as a learning on any day lands here too — every day's, newest first, in one list.</p>
-            <div class="tile-ledger-row"><span class="tile-ledger-date">Sep 14</span><span class="tile-ledger-text">Shipped the streak view — small scope wins.</span></div>
-            <div class="tile-ledger-row"><span class="tile-ledger-date">Sep 9</span><span class="tile-ledger-text">Three days of the routine sticking, finally.</span></div>
-          </div>
-          <div class="tile">
-            <h3>Yours alone</h3>
-            <p>Every account is isolated at the database level — not just the interface. No shared journal, no admin view.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="lpCta">
-      <div class="wide">
-        <h2>Start today's page.</h2>
-        <a href="/app?mode=signup" class="btn-primary">Get started — it's free</a>
-        <p class="cta-note">Every account is isolated at the database level. No shared journal, no admin view — nothing another user can ever see.</p>
+        <p class="cta-note">Free. Takes an email and a password.</p>
       </div>
     </section>
   </main>
 
-  <footer id="lpFooter">
-    <span>Journal</span>
-    <a href="/app">Log in</a>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <span class="brand brand-small">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Journal
+      </span>
+      <nav aria-label="Footer">
+        <a href="/app">Log in</a>
+        <a href="/app?mode=signup">Sign up</a>
+        <a href="#main">Back to top</a>
+      </nav>
+    </div>
   </footer>
 
   <script src="/landing.js"></script>
