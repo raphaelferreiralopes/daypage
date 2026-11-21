@@ -1409,13 +1409,16 @@ body.auth-locked #main { display: none; }
 .theme-opt:hover { color: var(--text); }
 .theme-opt.active { color: var(--text); background: var(--panel); box-shadow: var(--shadow-sm); }
 
-#accountBtn, #logoutBtn {
+#homeLink, #accountBtn, #logoutBtn {
   padding: 7px 0; border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm); background: transparent; color: var(--muted);
   font-size: 12.5px; cursor: pointer;
 }
+#homeLink { display: block; text-align: center; text-decoration: none; margin: 8px 12px 0; }
+#homeLink + #accountBtn { margin-top: 6px; }
 #accountBtn { margin: 8px 12px 0; }
 #logoutBtn { margin: 6px 12px 14px; }
+#homeLink:hover { background: var(--hover); color: var(--text); }
 #accountBtn:hover { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent); }
 #logoutBtn:hover { background: var(--red-soft); border-color: var(--red-soft); color: var(--red); }
 
