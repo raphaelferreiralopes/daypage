@@ -144,10 +144,9 @@ header#top.scrolled {
   max-width: var(--wrap); margin: 0 auto; padding: 14px var(--gutter);
   display: flex; align-items: center; gap: 32px;
 }
-.brand { display: inline-flex; align-items: center; gap: 9px; }
-.brand .mark { width: 24px; height: 24px; color: var(--blue); flex: none; }
-.brand .mark-fold { fill: #cfe5ff; }
-.brand-name { font-family: var(--serif); font-size: 23px; font-weight: 500; letter-spacing: -0.025em; line-height: 1; padding-bottom: 2px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; }
+.brand .mark { width: 18px; height: 18px; color: var(--blue); flex: none; }
+.brand-name { font-family: var(--serif); font-size: 23px; font-weight: 400; letter-spacing: -0.025em; line-height: 1; padding-bottom: 2px; }
 .nav { display: flex; gap: 26px; margin-left: 12px; }
 .nav a { font-size: 14px; color: var(--ink-2); transition: color 0.15s ease; }
 .nav a:hover { color: var(--ink); }
@@ -442,7 +441,7 @@ html:not([lang="de"]) .only-de { display: none; }
 /* --- footer ---------------------------------------------------------- */
 .foot { padding: 28px 0 40px; background: var(--sheet); }
 .foot-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding-top: 24px; border-top: 1px solid var(--line); }
-.brand-small .mark { width: 20px; height: 20px; }
+.brand-small .mark { width: 15px; height: 15px; }
 .brand-small .brand-name { font-size: 19px; }
 .foot nav { display: flex; gap: 22px; font-size: 14px; color: var(--ink-2); }
 .foot nav a:hover { color: var(--ink); }
