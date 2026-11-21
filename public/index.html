@@ -6,12 +6,14 @@
   <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)" />
-  <title>Journal — one page a day, a year you can see</title>
+  <title>Daypage — one page a day, a year you can see</title>
   <meta name="description" content="A private daily journal that keeps notes, habits, time tracking, cycles and yearly goals on one page for today — and lines every page up into weeks, cycles and a whole year." />
-  <meta property="og:title" content="Journal — one page a day, a year you can see" />
+  <meta property="og:title" content="Daypage — one page a day, a year you can see" />
   <meta property="og:description" content="Notes, habits, time, cycles and yearly goals on one private page per day." />
   <meta property="og:type" content="website" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23007aff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'/%3E%3Cpath d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/%3E%3C/svg%3E" />
+  <meta property="og:site_name" content="Daypage" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <script>
     // If a Supabase session is already sitting in localStorage, skip the landing
     // page (unless ?home asks to see it) and go straight to /app — no flash of marketing content,
@@ -58,9 +60,9 @@
 
   <header id="top">
     <div class="bar">
-      <a href="#main" class="brand" data-i18n-attr="aria-label:brandLabel" aria-label="Journal, back to top">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        Journal
+      <a href="#main" class="brand" data-i18n-attr="aria-label:brandLabel" aria-label="Daypage, back to top">
+        <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M15 0H42L64 22V49Q64 64 49 64H15Q0 64 0 49V15Q0 0 15 0Z" fill="currentColor"/><path d="M42 0V16Q42 22 48 22H64Z" class="mark-fold"/></svg>
+        <span class="brand-name">Daypage</span>
       </a>
       <nav class="nav" data-i18n-attr="aria-label:navLabel" aria-label="Sections">
         <a href="#day" data-i18n="navDay">The day</a>
@@ -88,7 +90,7 @@
         <p class="hero-date" id="heroDate">Today</p>
         <h1 id="heroTitle" data-i18n="heroTitle">One page a day.<br />A year you can see.</h1>
         <div class="hero-foot">
-          <p class="lede" data-i18n="heroLede">Journal keeps your notes, habits, time and goals on a single page for today, then lines every page up into weeks, cycles and a whole year. One private place instead of five apps that never talk to each other.</p>
+          <p class="lede" data-i18n="heroLede">Daypage keeps your notes, habits, time and goals on a single page for today, then lines every page up into weeks, cycles and a whole year. One private place instead of five apps that never talk to each other.</p>
           <div class="actions">
             <a href="/app?mode=signup" class="btn" data-i18n="ctaStart">Start today’s page</a>
             <a href="/app" class="link-quiet" data-i18n="haveAccount">I already have an account</a>
@@ -122,7 +124,7 @@
 
         <div class="app" id="appDemo">
           <aside class="app-side" aria-hidden="true">
-            <div class="side-title">Journal</div>
+            <div class="side-title">Daypage</div>
             <ul class="side-days" id="sideDays"></ul>
           </aside>
           <div class="app-main">
@@ -421,8 +423,8 @@
   <footer class="foot">
     <div class="wrap foot-row">
       <span class="brand brand-small">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        Journal
+        <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M15 0H42L64 22V49Q64 64 49 64H15Q0 64 0 49V15Q0 0 15 0Z" fill="currentColor"/><path d="M42 0V16Q42 22 48 22H64Z" class="mark-fold"/></svg>
+        <span class="brand-name">Daypage</span>
       </span>
       <nav data-i18n-attr="aria-label:footLabel" aria-label="Footer">
         <a href="/app" data-i18n="logIn">Log in</a>

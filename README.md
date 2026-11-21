@@ -1,4 +1,6 @@
-# 📓 Journal
+<img src="public/logo.svg" alt="Daypage" height="40" />
+
+# Daypage
 
 A personal productivity system: daily journal, habits, cycles/OKRs, time tracking, recurring checklists, and a learning log — one app, one account per user.
 

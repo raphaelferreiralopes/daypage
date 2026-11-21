@@ -1375,6 +1375,16 @@ body.auth-locked #main { display: none; }
   padding: 28px; width: 320px; max-width: calc(100vw - 32px);
   box-shadow: var(--shadow-pop);
 }
+/* Brand on the sign-in card; the light/dark logo files swap with the theme. */
+#authLogo { display: block; margin: 0 0 22px; line-height: 0; }
+#authLogo img { height: 30px; width: auto; }
+#authLogo .logo-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #authLogo .logo-light { display: none; }
+  :root:not([data-theme="light"]) #authLogo .logo-dark { display: inline; }
+}
+:root[data-theme="dark"] #authLogo .logo-light { display: none; }
+:root[data-theme="dark"] #authLogo .logo-dark { display: inline; }
 #authBox h2 { margin: 0 0 18px; font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
 #authForm { display: flex; flex-direction: column; gap: 10px; }
 #authForm input {

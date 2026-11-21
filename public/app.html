@@ -4,12 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light dark" />
-  <title>Journal</title>
+  <title>Daypage</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body class="auth-locked">
   <div id="authOverlay" hidden>
     <div id="authBox">
+      <a href="/?home" id="authLogo" aria-label="Daypage home page"><img class="logo-light" src="/logo.svg" alt="Daypage" width="130" height="32" /><img class="logo-dark" src="/logo-dark.svg" alt="Daypage" width="130" height="32" /></a>
       <h2 id="authTitle">Sign in</h2>
       <form id="authForm">
         <input id="authEmail" type="email" placeholder="Email" autocomplete="email" required />
