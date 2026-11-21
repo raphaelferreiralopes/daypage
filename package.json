@@ -7,8 +7,7 @@
   "scripts": {
     "dev": "vercel dev",
     "start": "node --env-file=.env api/index.js",
-    "migrate": "node --env-file=.env scripts/migrate-to-supabase.js",
-    "test": "node --test tests/"
+    "migrate": "node --env-file=.env scripts/migrate-to-supabase.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

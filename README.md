@@ -16,9 +16,9 @@ Then open `http://localhost:3000`, sign up, and sign in.
 ## How it works
 
 - Auth is Supabase Auth (email/password). The browser signs in directly against Supabase and attaches the session's JWT to every API call; the server verifies that JWT and Postgres RLS enforces isolation independently — see `lib/auth.js`.
-- **Only today's page is editable** — past days, past weeks, and ended cycles are view-only. This is enforced **server-side** (a save attempt outside the allowed window is rejected, not just hidden in the UI).
+- **Edit windows are enforced server-side** (a save outside the allowed window is rejected, not just hidden in the UI): any day up to today is editable, future days are not; weekly notes and the week reflexion only for the current week; a cycle until its end date.
 - Notes/Reflexion/Learnings/Priorities auto-save ~0.6s after you stop typing (and on blur).
-- "Today" is based on the server's local date.
+- "Today" is always the date in Europe/Berlin, on the server too (Vercel runs in UTC) — see `lib/dates.js`.
 - Forgot your password? There's a reset-link flow from the sign-in screen. You can also export your full data as JSON, or permanently delete your account (cascades to all your data), from the Account button in the sidebar.
 
 ## Views

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '..', '..');
 const WK_DIR = path.join(ROOT, 'week-notes');
 if (!fs.existsSync(WK_DIR)) {
   console.error('week-notes directory not found:', WK_DIR);
