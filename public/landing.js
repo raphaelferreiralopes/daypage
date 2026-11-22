@@ -13,7 +13,7 @@ const LANG_KEY = 'journal-landing-lang';
 // only the text a user would type into them is translated.
 const DE = {
   skip: 'Zum Inhalt springen',
-  brandLabel: 'Daypage, zurück nach oben',
+  brandLabel: 'Onepage, zurück nach oben',
   navLabel: 'Abschnitte',
   navDay: 'Der Tag',
   navScales: 'Wochen &amp; Zyklen',
@@ -24,7 +24,7 @@ const DE = {
   logIn: 'Anmelden',
   signUp: 'Registrieren',
   heroTitle: 'Eine Seite pro Tag.<br />Ein Jahr im Blick.',
-  heroLede: 'Daypage bündelt Notizen, Habits, Zeit und Ziele auf einer Seite für heute und reiht jede Seite zu Wochen, Zyklen und einem ganzen Jahr auf. Ein privater Ort statt fünf Apps, die nie miteinander reden.',
+  heroLede: 'Onepage bündelt Notizen, Habits, Zeit und Ziele auf einer Seite für heute und reiht jede Seite zu Wochen, Zyklen und einem ganzen Jahr auf. Ein privater Ort statt fünf Apps, die nie miteinander reden.',
   ctaStart: 'Heutige Seite beginnen',
   haveAccount: 'Ich habe schon ein Konto',
   yearLabel: 'Dein Jahr, ein Feld pro Tag',
@@ -125,7 +125,7 @@ const DE = {
 const STR = {
   en: {
     locale: 'en-GB',
-    title: 'Daypage — one page a day, a year you can see',
+    title: 'Onepage — one page a day, a year you can see',
     description: 'A private daily journal that keeps notes, habits, time tracking, cycles and yearly goals on one page for today — and lines every page up into weeks, cycles and a whole year.',
     yearCount: (n, y, left) => `Today is day <b>${n}</b> of ${y}. The other <b>${left}</b> are still blank.`,
     todayTip: 'Still blank. Yours to write.',
@@ -154,7 +154,7 @@ const STR = {
   },
   de: {
     locale: 'de-DE',
-    title: 'Daypage — eine Seite pro Tag, ein Jahr im Blick',
+    title: 'Onepage — eine Seite pro Tag, ein Jahr im Blick',
     description: 'Ein privates Tagebuch, das Notizen, Habits, Zeiterfassung, Zyklen und Jahresziele auf einer Seite für heute bündelt und jede Seite zu Wochen, Zyklen und einem ganzen Jahr aufreiht.',
     yearCount: (n, y, left) => `Heute ist Tag <b>${n}</b> von ${y}. Die übrigen <b>${left}</b> sind noch leer.`,
     todayTip: 'Noch leer. Gehört ganz dir.',

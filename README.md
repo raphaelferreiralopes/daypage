@@ -1,13 +1,13 @@
-<img src="public/logo.svg" alt="Daypage" height="40" />
+<img src="public/logo.svg" alt="Onepage" height="40" />
 
-# Daypage
+# Onepage
 
 A personal productivity system in one app: a daily journal, habit tracking, multi-week cycles with goals, time tracking, recurring checklists and a learning log.
 
 I built it because I wanted all of my daily planning and reflection in one place, shaped around how I actually work, instead of spread across five different apps. It started as a single-user app that saved everything to local files and grew into a hosted multi-user app with real authentication and per-user data isolation.
 
 <!-- Screenshot: add one at docs/screenshot.png and uncomment the line below -->
-<!-- ![Daypage: the daily journal view](docs/screenshot.png) -->
+<!-- ![Onepage: the daily journal view](docs/screenshot.png) -->
 
 ## Highlights
 
